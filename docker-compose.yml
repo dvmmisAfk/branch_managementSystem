@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: branch_tracker
+    volumes:
+      - pg_branch_tracker:/var/lib/postgresql/data
+    # Do not publish 5432 on production hosts — keep DB on the Docker network only.
+    # Uncomment for local debugging from the host:
+    # ports:
+    #   - "5432:5432"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/branch_tracker?schema=public
+      # Replace with strong secrets from your secrets manager; never commit real values.
+      JWT_SECRET: dev-access-secret-change-in-production-at-least-32-chars
+      JWT_REFRESH_SECRET: dev-refresh-secret-change-production-min-thirty-two
+      JWT_EXPIRY: 15m
+      JWT_REFRESH_EXPIRY: 7d
+      PORT: 3001
+      NODE_ENV: production
+      # Required when NODE_ENV=production (see backend/src/config/env.ts). Browser origins for the SPA.
+      ALLOWED_ORIGINS: "http://localhost:8080,http://127.0.0.1:8080"
+      # Compose serves HTTP on localhost; disable HTTPS gate. Behind TLS termination, set ENFORCE_HTTPS=true and forward X-Forwarded-Proto.
+      ENFORCE_HTTPS: "false"
+      API_DEBUG: "false"
+    ports:
+      - "3001:3001"
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:3001/api/v1
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+volumes:
+  pg_branch_tracker:

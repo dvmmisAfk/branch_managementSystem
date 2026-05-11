@@ -1,0 +1,1418 @@
+[
+  {
+    "branch_code": "DR02",
+    "sap_code": "UT02",
+    "location": "Dehradun",
+    "city": "Dehradun",
+    "state": "Uttarakhand",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "DR03",
+    "sap_code": "UT03",
+    "location": "Haridwar",
+    "city": "Haridwar",
+    "state": "Uttarakhand",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "HD01",
+    "sap_code": "UT04",
+    "location": "Nainital - Haldwani",
+    "city": "Haldwani",
+    "state": "Uttarakhand",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "RU01",
+    "sap_code": "UT05",
+    "location": "Rudrapur - Udham singh nagar",
+    "city": "Rudrapur",
+    "state": "Uttarakhand",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "AL03",
+    "sap_code": "UT06",
+    "location": "Almora",
+    "city": "Almora",
+    "state": "Uttarakhand",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "GW05",
+    "sap_code": "UT07",
+    "location": "Kotdwar",
+    "city": "Garhwal",
+    "state": "Uttarakhand",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "RU02",
+    "sap_code": "UT08",
+    "location": "Kashipur",
+    "city": "Kashipur",
+    "state": "Uttarakhand",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "PG01",
+    "sap_code": "UT09",
+    "location": "Pithoragarh",
+    "city": "Pithoragarh",
+    "state": "Uttarakhand",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "ND03",
+    "sap_code": "UP11",
+    "location": "Ghaziabad - Kaushambi",
+    "city": "Ghaziabad",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "FZ01",
+    "sap_code": "UP06",
+    "location": "Faizabad",
+    "city": "Faizabad",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "AD01",
+    "sap_code": "UP15",
+    "location": "Aligarh",
+    "city": "Aligarh",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "MN01",
+    "sap_code": "UP31",
+    "location": "Muzzafarnagar",
+    "city": "Muzzafarnagar",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "VR02",
+    "sap_code": "UP23",
+    "location": "Varanasi",
+    "city": "Varanasi",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "AL02",
+    "sap_code": "UP20",
+    "location": "Allahabad",
+    "city": "Allahabad",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "KU02",
+    "sap_code": "UP22",
+    "location": "Kanpur",
+    "city": "Kanpur",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "ME02",
+    "sap_code": "UP28",
+    "location": "Meerut",
+    "city": "Meerut",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "GK03",
+    "sap_code": "UP27",
+    "location": "Gorakhpur",
+    "city": "Gorakhpur",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "LU03",
+    "sap_code": "UP24",
+    "location": "Lucknow-Ratan Square",
+    "city": "Lucknow",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "AG02",
+    "sap_code": "UP25",
+    "location": "Agra",
+    "city": "Agra",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "MD03",
+    "sap_code": "UP51",
+    "location": "Moradabad",
+    "city": "Moradabad",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "BR04",
+    "sap_code": "UP52",
+    "location": "Bareilly",
+    "city": "Bareilly",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "ND27",
+    "sap_code": "DL22",
+    "location": "Noida",
+    "city": "Noida",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "SH02",
+    "sap_code": "UP53",
+    "location": "Saharanpur",
+    "city": "Saharanpur",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "MT02",
+    "sap_code": "UP54",
+    "location": "Mathura",
+    "city": "Mathura",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "LU04",
+    "sap_code": "UP55",
+    "location": "Lucknow- Indira  Nagar",
+    "city": "Lucknow",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "JS02",
+    "sap_code": "UP56",
+    "location": "Jhansi",
+    "city": "Jhansi",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "SJ02",
+    "sap_code": "UP57",
+    "location": "Shahjahanpur",
+    "city": "Shahjahanpur",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "GN03",
+    "sap_code": "UP63",
+    "location": "Greater Noida",
+    "city": "Greater Noida",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "GZ03",
+    "sap_code": "UP64",
+    "location": "Ghaziabad",
+    "city": "Ghaziabad",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "KU03",
+    "sap_code": "UP59",
+    "location": "Kanpur-Ashok Nagar",
+    "city": "Kanpur",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "RB03",
+    "sap_code": "UP60",
+    "location": "Raebareli",
+    "city": "Raebareli",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "LU05",
+    "sap_code": "UP58",
+    "location": "Gomtinagar, Lucknow",
+    "city": "Lucknow",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "BJ02",
+    "sap_code": "UP61",
+    "location": "Bijnor",
+    "city": "Bijnor",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "AZ02",
+    "sap_code": "UP62",
+    "location": "Azamgarh",
+    "city": "Azamgarh",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "DE03",
+    "sap_code": "UP65",
+    "location": "Deoria",
+    "city": "Deoria",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "SD02",
+    "sap_code": "UP73",
+    "location": "Renukoot",
+    "city": "Renukoot",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "PZ02",
+    "sap_code": "UP69",
+    "location": "Pratapgarh",
+    "city": "Pratapgarh",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "MZ04",
+    "sap_code": "UP67",
+    "location": "Mirzapur",
+    "city": "Mirzapur",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "SR04",
+    "sap_code": "UP71",
+    "location": "Sitapur",
+    "city": "Sitapur",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "FZ03",
+    "sap_code": "UP72",
+    "location": "Gonda",
+    "city": "Gonda",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "BN03",
+    "sap_code": "UP66",
+    "location": "Badaun",
+    "city": "Badaun",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "JU02",
+    "sap_code": "UP68",
+    "location": "Jaunpur",
+    "city": "Jaunpur",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "HX01",
+    "sap_code": "UP70",
+    "location": "Hardoi",
+    "city": "Hardoi",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "FB03",
+    "sap_code": "UP74",
+    "location": "Firozabad",
+    "city": "Firozabad",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "BA03",
+    "sap_code": "UP75",
+    "location": "Ballia",
+    "city": "Ballia",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "BB04",
+    "sap_code": "UP89",
+    "location": "Bara Banki",
+    "city": "Bara Banki",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "KH04",
+    "sap_code": "UP86",
+    "location": "Lakhimpur-Kheri",
+    "city": "Kheri",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "AG03",
+    "sap_code": "UP85",
+    "location": "Agra - Fatehabad",
+    "city": "Agra",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "HP02",
+    "sap_code": "UP81",
+    "location": "Hapur",
+    "city": "Hapur",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "BS06",
+    "sap_code": "UP87",
+    "location": "Basti",
+    "city": "Basti",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "BU07",
+    "sap_code": "UP78",
+    "location": "DM Road - Bulandshahar",
+    "city": "Bulandshahar",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "ET01",
+    "sap_code": "UP88",
+    "location": "Etawah",
+    "city": "Etawah",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "BP03",
+    "sap_code": "UP91",
+    "location": "Baraut",
+    "city": "Baraut",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "GZ08",
+    "sap_code": "UP79",
+    "location": "Ghazipur",
+    "city": "Ghazipur",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "GZ13",
+    "sap_code": "UP84",
+    "location": "Shahadatpura",
+    "city": "Shahadatpura",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "FT02",
+    "sap_code": "UP80",
+    "location": "Fatehpur",
+    "city": "Fatehpur",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "SQ02",
+    "sap_code": "UP92",
+    "location": "Sultanpur",
+    "city": "Sultanpur",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "AU05",
+    "sap_code": "UP83",
+    "location": "Auraiya",
+    "city": "Auraiya",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "JL03",
+    "sap_code": "UP82",
+    "location": "Orai",
+    "city": "Orai",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "VR06",
+    "sap_code": "UP77",
+    "location": "Varunapar",
+    "city": "Varanasi",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "GZ04",
+    "sap_code": "UP76",
+    "location": "Indirapuram",
+    "city": "Ghaziabad",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "GK04",
+    "sap_code": "UP90",
+    "location": "Taramandal",
+    "city": "Gorakhpur",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "SM05",
+    "sap_code": "UP95",
+    "location": "Shamli",
+    "city": "Shamli",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "RM02",
+    "sap_code": "UP96",
+    "location": "Rampur-UP",
+    "city": "Rampur",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "SD04",
+    "sap_code": "UP93",
+    "location": "Robertsganj",
+    "city": "Robertsganj",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "BC03",
+    "sap_code": "UP97",
+    "location": "Bahraich",
+    "city": "Bahraich",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "UN01",
+    "sap_code": "UP98",
+    "location": "Unnao",
+    "city": "Unnao",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "SN04",
+    "sap_code": "UP94",
+    "location": "Bhadohi",
+    "city": "Bhadohi",
+    "state": "Uttar Pradesh",
+    "sfh_name": "Shivendra Agrahari"
+  },
+  {
+    "branch_code": "SK01",
+    "sap_code": "RJ08",
+    "location": "Sikar",
+    "city": "Sikar",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "JD01",
+    "sap_code": "RJ10",
+    "location": "Jodhpur",
+    "city": "Jodhpur",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "UR02",
+    "sap_code": "RJ21",
+    "location": "Udaipur",
+    "city": "Udaipur",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "JA01",
+    "sap_code": "RJ24",
+    "location": "Jaipur",
+    "city": "Jaipur",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "KT03",
+    "sap_code": "RJ39",
+    "location": "Kota",
+    "city": "Kota",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "JA06",
+    "sap_code": "RJ48",
+    "location": "Jaipur",
+    "city": "Jaipur",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "BF03",
+    "sap_code": "RJ44",
+    "location": "Bhilwara",
+    "city": "Bhilwara",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "GG02",
+    "sap_code": "RJ45",
+    "location": "Ganganagar",
+    "city": "Ganganagar",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "BA02",
+    "sap_code": "RJ42",
+    "location": "Bikaner",
+    "city": "Bikaner",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "RH02",
+    "sap_code": "RJ46",
+    "location": "Sadulpur",
+    "city": "Rajgarh",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "AJ03",
+    "sap_code": "RJ40",
+    "location": "Ajmer",
+    "city": "Ajmer",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "PL02",
+    "sap_code": "RJ47",
+    "location": "Pali",
+    "city": "Pali",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "JJ02",
+    "sap_code": "RJ43",
+    "location": "Jhunjhunu",
+    "city": "Jhunjhunu",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "AW02",
+    "sap_code": "RJ41",
+    "location": "Alwar",
+    "city": "Alwar",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "HN01",
+    "sap_code": "RJ52",
+    "location": "Hanumangarh",
+    "city": "Hanumangarh",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "NU02",
+    "sap_code": "RJ49",
+    "location": "Kuchaman",
+    "city": "Kuchaman",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "BT03",
+    "sap_code": "RJ50",
+    "location": "Bharatpur",
+    "city": "Bharatpur",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "TN01",
+    "sap_code": "RJ51",
+    "location": "Tonk",
+    "city": "Tonk",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "BE02",
+    "sap_code": "RJ53",
+    "location": "Balotra",
+    "city": "Balotra",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "CR02",
+    "sap_code": "RJ54",
+    "location": "Chittorgarh",
+    "city": "Chittorgarh",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "JD03",
+    "sap_code": "RJ57",
+    "location": "Jodhpur New",
+    "city": "Jodhpur",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "UR04",
+    "sap_code": "RJ55",
+    "location": "Rishabhdeo",
+    "city": "Udaipur",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "JA08",
+    "sap_code": "RJ58",
+    "location": "Bhinmal",
+    "city": "Bhinmal",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "JA07",
+    "sap_code": "RJ56",
+    "location": "Malviya Nagar-Jaipur",
+    "city": "Jaipur",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "SI03",
+    "sap_code": "RJ61",
+    "location": "Sirohi",
+    "city": "Sirohi",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "UR07",
+    "sap_code": "RJ60",
+    "location": "Banswara",
+    "city": "Banswara",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "UR05",
+    "sap_code": "RJ59",
+    "location": "Dungarpur",
+    "city": "Dungarpur",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "SK03",
+    "sap_code": "RJ62",
+    "location": "Neem Ka Thana",
+    "city": "Neem Ka Thana",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "AW03",
+    "sap_code": "RJ64",
+    "location": "Bhiwadi",
+    "city": "Bhiwadi",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "JD04",
+    "sap_code": "RJ63",
+    "location": "Phalodi",
+    "city": "Phalodi",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "JH03",
+    "sap_code": "RJ65",
+    "location": "Jhalawar",
+    "city": "Jhalawar",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "GG03",
+    "sap_code": "RJ66",
+    "location": "Suratgarh",
+    "city": "Suratgarh",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "CR03",
+    "sap_code": "RJ67",
+    "location": "Sujangarh",
+    "city": "Sujangarh",
+    "state": "Rajasthan",
+    "sfh_name": "Anil Kumar"
+  },
+  {
+    "branch_code": "JN02",
+    "sap_code": "PJ14",
+    "location": "Jalandhar",
+    "city": "Jalandhar",
+    "state": "Punjab",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "LD02",
+    "sap_code": "PJ06",
+    "location": "Ludhiana",
+    "city": "Ludhiana",
+    "state": "Punjab",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "AM02",
+    "sap_code": "PJ13",
+    "location": "Amritsar",
+    "city": "Amritsar",
+    "state": "Punjab",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "PA03",
+    "sap_code": "PJ19",
+    "location": "Patiala",
+    "city": "Patiala",
+    "state": "Punjab",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "BT02",
+    "sap_code": "PJ20",
+    "location": "Bhatinda",
+    "city": "Bhatinda",
+    "state": "Punjab",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "PA04",
+    "sap_code": "PJ21",
+    "location": "Pathankot",
+    "city": "Pathankot",
+    "state": "Punjab",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "HO02",
+    "sap_code": "PJ24",
+    "location": "Hoshiarpur",
+    "city": "Hoshiarpur",
+    "state": "Punjab",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "LD03",
+    "sap_code": "PJ22",
+    "location": "Khanna, Ludhiana",
+    "city": "Khanna",
+    "state": "Punjab",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "KT04",
+    "sap_code": "PJ25",
+    "location": "Kapurthala",
+    "city": "Kapurthala",
+    "state": "Punjab",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "GP01",
+    "sap_code": "PJ26",
+    "location": "Gurdaspur",
+    "city": "Gurdaspur",
+    "state": "Punjab",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "AM04",
+    "sap_code": "PJ23",
+    "location": "Amritsar",
+    "city": "Amritsar",
+    "state": "Punjab",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "NH01",
+    "sap_code": "PJ30",
+    "location": "Nawanshahar",
+    "city": "Nawanshahar",
+    "state": "Punjab",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "RP01",
+    "sap_code": "PJ28",
+    "location": "Rupnagar",
+    "city": "Rupnagar",
+    "state": "Punjab",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "FR02",
+    "sap_code": "PJ31",
+    "location": "Ferozpur",
+    "city": "Ferozpur",
+    "state": "Punjab",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "MO02",
+    "sap_code": "PJ29",
+    "location": "Moga",
+    "city": "Moga",
+    "state": "Punjab",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "MK01",
+    "sap_code": "PJ27",
+    "location": "Muktsar",
+    "city": "Muktsar",
+    "state": "Punjab",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "FA01",
+    "sap_code": "PJ32",
+    "location": "Abohar",
+    "city": "Abohar",
+    "state": "Punjab",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "MH04",
+    "sap_code": "PJ33",
+    "location": "Mohali",
+    "city": "Mohali",
+    "state": "Punjab",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "KT08",
+    "sap_code": "PJ34",
+    "location": "Phagwara",
+    "city": "Phagwara",
+    "state": "Punjab",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "FK01",
+    "sap_code": "PJ35",
+    "location": "Faridkot",
+    "city": "Faridkot",
+    "state": "Punjab",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "BN04",
+    "sap_code": "PJ36",
+    "location": "Barnala",
+    "city": "Barnala",
+    "state": "Punjab",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "LH01",
+    "sap_code": "LD01",
+    "location": "Leh",
+    "city": "Leh",
+    "state": "Ladakh",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "JM05",
+    "sap_code": "JM01",
+    "location": "Jammu",
+    "city": "Jammu",
+    "state": "Jammu & Kashmir",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "JM06",
+    "sap_code": "JM02",
+    "location": "Srinagar",
+    "city": "Srinagar",
+    "state": "Jammu & Kashmir",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "KT06",
+    "sap_code": "JM03",
+    "location": "Kathua",
+    "city": "Kathua",
+    "state": "Jammu & Kashmir",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "UD02",
+    "sap_code": "JM04",
+    "location": "Udhampur",
+    "city": "Udhampur",
+    "state": "Jammu & Kashmir",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "RO01",
+    "sap_code": "JM05",
+    "location": "Rajouri",
+    "city": "Rajouri",
+    "state": "Jammu & Kashmir",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "MI02",
+    "sap_code": "HP06",
+    "location": "Mandi",
+    "city": "Mandi",
+    "state": "Himachal Pradesh",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "SM04",
+    "sap_code": "HP08",
+    "location": "Shimla",
+    "city": "Shimla",
+    "state": "Himachal Pradesh",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "KG02",
+    "sap_code": "HP07",
+    "location": "Dharamshala, Kangra",
+    "city": "Dharamshala",
+    "state": "Himachal Pradesh",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "UA01",
+    "sap_code": "HP09",
+    "location": "Una",
+    "city": "Una",
+    "state": "Himachal Pradesh",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "KL03",
+    "sap_code": "HP10",
+    "location": "Kullu",
+    "city": "Kullu",
+    "state": "Himachal Pradesh",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "HM03",
+    "sap_code": "HP12",
+    "location": "Hamirpur",
+    "city": "Hamirpur",
+    "state": "Himachal Pradesh",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "SN03",
+    "sap_code": "HP11",
+    "location": "Solan",
+    "city": "Solan",
+    "state": "Himachal Pradesh",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "CB05",
+    "sap_code": "HP16",
+    "location": "Chamba",
+    "city": "Chamba",
+    "state": "Himachal Pradesh",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "SM06",
+    "sap_code": "HP15",
+    "location": "Rampur-HP",
+    "city": "Rampur",
+    "state": "Himachal Pradesh",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "KL01",
+    "sap_code": "HA06",
+    "location": "Karnal",
+    "city": "Karnal",
+    "state": "Haryana",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "RH01",
+    "sap_code": "HA01",
+    "location": "Rohtak",
+    "city": "Rohtak",
+    "state": "Haryana",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "HS01",
+    "sap_code": "HA03",
+    "location": "Hisar",
+    "city": "Hisar",
+    "state": "Haryana",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "ND15",
+    "sap_code": "HA10",
+    "location": "Gurugram",
+    "city": "Gurugram",
+    "state": "Haryana",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "FB02",
+    "sap_code": "HA11",
+    "location": "Faridabad",
+    "city": "Faridabad",
+    "state": "Haryana",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "JI01",
+    "sap_code": "HA17",
+    "location": "Jind",
+    "city": "Jind",
+    "state": "Haryana",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "SY01",
+    "sap_code": "HA14",
+    "location": "Sirsa",
+    "city": "Sirsa",
+    "state": "Haryana",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "NW01",
+    "sap_code": "HA15",
+    "location": "Narwana",
+    "city": "Narwana",
+    "state": "Haryana",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "BN02",
+    "sap_code": "HA13",
+    "location": "Bhiwani",
+    "city": "Bhiwani",
+    "state": "Haryana",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "RE01",
+    "sap_code": "HA16",
+    "location": "Rewari",
+    "city": "Rewari",
+    "state": "Haryana",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "ND25",
+    "sap_code": "HA18",
+    "location": "Gurugram - Global Business Park",
+    "city": "Gurugram",
+    "state": "Haryana",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "PN02",
+    "sap_code": "HA21",
+    "location": "Panipat",
+    "city": "Panipat",
+    "state": "Haryana",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "PK03",
+    "sap_code": "HA19",
+    "location": "Panchkula",
+    "city": "Panchkula",
+    "state": "Haryana",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "ND31",
+    "sap_code": "HA22",
+    "location": "New Gurugram",
+    "city": "Gurugram",
+    "state": "Haryana",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "AY02",
+    "sap_code": "HA20",
+    "location": "Ambala",
+    "city": "Ambala",
+    "state": "Haryana",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "KI03",
+    "sap_code": "HA23",
+    "location": "Kaithal",
+    "city": "Kaithal",
+    "state": "Haryana",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "KH03",
+    "sap_code": "HA27",
+    "location": "Kurukshetra",
+    "city": "Kurukshetra",
+    "state": "Haryana",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "YN01",
+    "sap_code": "HA25",
+    "location": "Yamunanagar",
+    "city": "Yamunanagar",
+    "state": "Haryana",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "SP02",
+    "sap_code": "HA26",
+    "location": "Sonipat",
+    "city": "Sonipat",
+    "state": "Haryana",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "PW01",
+    "sap_code": "HA24",
+    "location": "Palwal",
+    "city": "Palwal",
+    "state": "Haryana",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "HS03",
+    "sap_code": "HA28",
+    "location": "Hisar - extn",
+    "city": "Hisar",
+    "state": "Haryana",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "FT01",
+    "sap_code": "HA31",
+    "location": "Fatehabad",
+    "city": "Fatehabad",
+    "state": "Haryana",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "RH03",
+    "sap_code": "HA30",
+    "location": "Bahadurgarh",
+    "city": "Bahadurgarh",
+    "state": "Haryana",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "JH02",
+    "sap_code": "HP13",
+    "location": "Jhajjar",
+    "city": "Jhajjar",
+    "state": "Haryana",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "NU03",
+    "sap_code": "HP14",
+    "location": "Narnaul",
+    "city": "Narnaul",
+    "state": "Haryana",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "SY04",
+    "sap_code": "HA29",
+    "location": "Dabwali",
+    "city": "Dabwali",
+    "state": "Haryana",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "BN05",
+    "sap_code": "HA33",
+    "location": "Charkhi Dadri",
+    "city": "Charkhi Dadri",
+    "state": "Haryana",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "HS04",
+    "sap_code": "HA34",
+    "location": "Hansi",
+    "city": "Hansi",
+    "state": "Haryana",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "FT03",
+    "sap_code": "HA32",
+    "location": "Tohana",
+    "city": "Tohana",
+    "state": "Haryana",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "ND11",
+    "sap_code": "DL06",
+    "location": "Delhi - Main Mathura Road",
+    "city": "Delhi",
+    "state": "Delhi",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "ND12",
+    "sap_code": "DL07",
+    "location": "Delhi - Rohini",
+    "city": "Delhi",
+    "state": "Delhi",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "ND13",
+    "sap_code": "DL13",
+    "location": "Himalaya House",
+    "city": "Delhi",
+    "state": "Delhi",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "DW02",
+    "sap_code": "DL20",
+    "location": "Delhi - Dwarka",
+    "city": "Delhi",
+    "state": "Delhi",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "ND26",
+    "sap_code": "DL21",
+    "location": "Delhi - Janakpuri",
+    "city": "Delhi",
+    "state": "Delhi",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "ND28",
+    "sap_code": "DL24",
+    "location": "Delhi - NSP",
+    "city": "Delhi",
+    "state": "Delhi",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "ND29",
+    "sap_code": "DL25",
+    "location": "Delhi - Karkarduma",
+    "city": "Delhi",
+    "state": "Delhi",
+    "sfh_name": "Anupam Sagar"
+  },
+  {
+    "branch_code": "GR04",
+    "sap_code": "DL26",
+    "location": "Hauz Khas",
+    "city": "Delhi",
+    "state": "Delhi",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "MT03",
+    "sap_code": "DL27",
+    "location": "Model Town",
+    "city": "Delhi",
+    "state": "Delhi",
+    "sfh_name": "Dharmbir Singh"
+  },
+  {
+    "branch_code": "ND32",
+    "sap_code": "DL28",
+    "location": "Naraina Vihar - New Delhi",
+    "city": "New Delhi",
+    "state": "Delhi",
+    "sfh_name": "Ajay Kumar"
+  },
+  {
+    "branch_code": "CG03",
+    "sap_code": "CH03",
+    "location": "Chandigarh",
+    "city": "Chandigarh",
+    "state": "Chandigarh",
+    "sfh_name": "Dharmbir Singh"
+  }
+]

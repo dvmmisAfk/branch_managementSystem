@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+
+# Builds
+dist/
+build/
+*.tsbuildinfo
+
+# Environment & secrets (never commit real credentials)
+.env
+.env.*
+!.env.example
+!**/.env.example
+!**/.env.local.example
+!**/.env.production.example
+
+# Local overrides (Vite / tooling)
+*.local
+
+# Logs & OS
+*.log
+.DS_Store
+Thumbs.db
+
+# IDE & local agent settings (machine-specific)
+.claude/
+.idea/
+*.swp
+*.swo
+
+# Debug & coverage
+coverage/
+.nyc_output/
+
+# Prisma (keep migrations; ignore generated client cache if any stray)
+backend/node_modules/.cache/
+
+# Optional: local DB / dumps
+*.sqlite
+*.db
+
+# Local scratch / exports (do not commit)
+Prompt.rtf

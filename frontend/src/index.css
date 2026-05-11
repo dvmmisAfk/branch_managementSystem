@@ -1,0 +1,130 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Primary */
+  --color-primary-50:  #EEF2FF;
+  --color-primary-100: #E0E7FF;
+  --color-primary-200: #C7D2FE;
+  --color-primary-500: #6366F1;
+  --color-primary-600: #4F46E5;
+  --color-primary-700: #4338CA;
+  --color-primary-800: #3730A3;
+
+  /* Neutrals */
+  --color-gray-50:  #F9FAFB;
+  --color-gray-100: #F3F4F6;
+  --color-gray-200: #E5E7EB;
+  --color-gray-300: #D1D5DB;
+  --color-gray-400: #9CA3AF;
+  --color-gray-500: #6B7280;
+  --color-gray-700: #374151;
+  --color-gray-900: #111827;
+
+  /* Nav */
+  --color-nav-bg:   #1E1B4B;
+  --color-nav-text: #C7D2FE;
+
+  /* Score bands */
+  --color-excellent:            #059669;
+  --color-excellent-bg:         #D1FAE5;
+  --color-good:                 #2563EB;
+  --color-good-bg:              #DBEAFE;
+  --color-satisfactory:         #D97706;
+  --color-satisfactory-bg:      #FEF3C7;
+  --color-needs-improvement:    #EA580C;
+  --color-needs-improvement-bg: #FFEDD5;
+  --color-critical:             #DC2626;
+  --color-critical-bg:          #FEE2E2;
+
+  /* Visit status */
+  --color-draft:        #D97706;
+  --color-draft-bg:     #FEF9C3;
+  --color-submitted:    #059669;
+  --color-submitted-bg: #D1FAE5;
+  --color-pending:      #7C3AED;
+  --color-pending-bg:   #EDE9FE;
+
+  /* Surfaces */
+  --color-surface:   #FFFFFF;
+  --shadow-card:     0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-modal:    0 20px 60px rgba(0,0,0,0.15);
+  --shadow-sticky:   0 -2px 8px rgba(0,0,0,0.08);
+
+  /* Component tokens */
+  --card-radius: 12px;
+  --card-padding: 24px;
+  --card-border: 1px solid var(--color-gray-200);
+  --card-shadow: var(--shadow-card);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  color: var(--color-gray-700);
+  background: var(--color-gray-50);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+html {
+  overflow-x: hidden;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Modals: avoid viewport overflow on small phones */
+.ant-modal-root .ant-modal-wrap {
+  padding: 8px;
+}
+.ant-modal {
+  max-width: calc(100vw - 16px) !important;
+  margin: 12px auto !important;
+}
+
+/* Tables: horizontal scroll lives inside table wrapper, not the page */
+.ant-table-wrapper {
+  max-width: 100%;
+}
+
+/* Transitions on all interactive elements */
+button,
+.ant-btn,
+.ant-menu-item,
+.ant-table-row,
+.ant-input,
+.ant-select-selector,
+a {
+  transition: all 150ms ease;
+}
+
+/* Table improvements */
+.ant-table-thead > tr > th {
+  background: var(--color-gray-50) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-gray-500) !important;
+}
+
+.ant-table-tbody > tr:hover > td {
+  background: var(--color-gray-50) !important;
+  cursor: pointer;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-gray-300); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-gray-400); }
