@@ -507,7 +507,7 @@ export function VisitDetailPage() {
                       <Row gutter={16}>
                         <Col xs={24} md={12}>
                           <Form.Item name="visit_date_actual" label="Visit Date">
-                            {visit.visitDateLockedAt && !isSupervisor ? (
+                            {visit.visitDateLockedAt && !isSupervisor && visit.isSubmitted ? (
                               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                 <Lock size={14} color="#D97706" />
                                 <span style={{ fontSize: 14, color: "#374151" }}>{fmtDate(visit.visitDateActual)}</span>

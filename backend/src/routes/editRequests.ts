@@ -105,7 +105,7 @@ router.patch("/:id/approve", requireRoles(UserRole.supervisor), async (req, res,
     await prisma.$transaction([
       prisma.branchVisit.update({
         where: { id: editRequest.visitId },
-        data: { isSubmitted: false, submittedAt: null },
+        data: { isSubmitted: false, submittedAt: null, visitDateLockedAt: null },
       }),
       prisma.visitEditRequest.update({
         where: { id },
