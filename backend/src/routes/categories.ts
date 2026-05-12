@@ -90,46 +90,41 @@ router.patch("/:id", requireRoles(UserRole.supervisor), async (req, res, next) =
     const weightPercentRaw =
       body.weightPercent !== undefined ? body.weightPercent : old.weightPercent ? Number(old.weightPercent) : null;
 
-    const neu = await prisma.$transaction(async (tx) => {
-      const created = await tx.assessmentCategory.create({
-        data: {
-          name,
-          displayOrder,
-          maxPoints: maxPoints ?? undefined,
-          weightPercent:
-            weightPercentRaw === null || weightPercentRaw === undefined ?
-              undefined
-            : new Prisma.Decimal(weightPercentRaw),
-          version: old.version + 1,
-        },
-      });
-
-      const activeSubs = old.subcategories.filter((s) => s.isActive);
-      for (const s of activeSubs) {
-        await tx.assessmentSubcategory.create({
-          data: {
-            categoryId: created.id,
-            name: s.name,
-            description: s.description,
-            maxScore: s.maxScore,
-            weightWithinCategory: s.weightWithinCategory ?? undefined,
-            displayOrder: s.displayOrder,
-            isActive: true,
+    const activeSubs = old.subcategories.filter((s) => s.isActive);
+    const neu = await prisma.assessmentCategory.create({
+      data: {
+        name,
+        displayOrder,
+        maxPoints: maxPoints ?? undefined,
+        weightPercent:
+          weightPercentRaw === null || weightPercentRaw === undefined ?
+            undefined
+          : new Prisma.Decimal(weightPercentRaw),
+        version: old.version + 1,
+        subcategories: {
+          createMany: {
+            data: activeSubs.map((s) => ({
+              name: s.name,
+              description: s.description,
+              maxScore: s.maxScore,
+              weightWithinCategory: s.weightWithinCategory ?? undefined,
+              displayOrder: s.displayOrder,
+              isActive: true,
+            })),
           },
-        });
-      }
-
-      await tx.assessmentSubcategory.updateMany({
+        },
+      },
+    });
+    await prisma.$transaction([
+      prisma.assessmentSubcategory.updateMany({
         where: { categoryId: old.id },
         data: { isActive: false },
-      });
-      await tx.assessmentCategory.update({
+      }),
+      prisma.assessmentCategory.update({
         where: { id: old.id },
         data: { isActive: false },
-      });
-
-      return created;
-    });
+      }),
+    ]);
 
     const full = await prisma.assessmentCategory.findUnique({
       where: { id: neu.id },
@@ -163,31 +158,29 @@ router.post("/:categoryId/subcategories", requireRoles(UserRole.supervisor), asy
     });
     if (clash?.isActive) throw new HttpError("display_order already used in this category", 409);
 
-    const row = await prisma.$transaction(async (tx) => {
-      if (clash && !clash.isActive) {
-        const maxAgg = await tx.assessmentSubcategory.aggregate({
-          where: { categoryId: catId },
-          _max: { displayOrder: true },
-        });
-        const bump = (maxAgg._max.displayOrder ?? 0) + 10_000;
-        await tx.assessmentSubcategory.update({
-          where: { id: clash.id },
-          data: { displayOrder: bump },
-        });
-      }
-      return tx.assessmentSubcategory.create({
-        data: {
-          categoryId: catId,
-          name: body.name,
-          description: body.description ?? null,
-          maxScore: body.maxScore,
-          displayOrder: body.displayOrder,
-          weightWithinCategory:
-            body.weightWithinCategory === undefined || body.weightWithinCategory === null ?
-              undefined
-            : new Prisma.Decimal(body.weightWithinCategory),
-        },
+    if (clash && !clash.isActive) {
+      const maxAgg = await prisma.assessmentSubcategory.aggregate({
+        where: { categoryId: catId },
+        _max: { displayOrder: true },
       });
+      const bump = (maxAgg._max.displayOrder ?? 0) + 10_000;
+      await prisma.assessmentSubcategory.update({
+        where: { id: clash.id },
+        data: { displayOrder: bump },
+      });
+    }
+    const row = await prisma.assessmentSubcategory.create({
+      data: {
+        categoryId: catId,
+        name: body.name,
+        description: body.description ?? null,
+        maxScore: body.maxScore,
+        displayOrder: body.displayOrder,
+        weightWithinCategory:
+          body.weightWithinCategory === undefined || body.weightWithinCategory === null ?
+            undefined
+          : new Prisma.Decimal(body.weightWithinCategory),
+      },
     });
     res.status(201).json(row);
   } catch (e) {
@@ -221,45 +214,41 @@ router.patch(
         : old.weightWithinCategory ? Number(old.weightWithinCategory)
         : null;
 
-      const row = await prisma.$transaction(async (tx) => {
-        const maxAgg = await tx.assessmentSubcategory.aggregate({
+      const maxAgg = await prisma.assessmentSubcategory.aggregate({
+        where: { categoryId },
+        _max: { displayOrder: true },
+      });
+      const bump = (maxAgg._max.displayOrder ?? 0) + 10_000;
+      await prisma.assessmentSubcategory.update({
+        where: { id: old.id },
+        data: { isActive: false, displayOrder: bump },
+      });
+
+      const occupied = await prisma.assessmentSubcategory.findUnique({
+        where: { categoryId_displayOrder: { categoryId, displayOrder } },
+      });
+      if (occupied?.isActive) throw new HttpError("display_order clashes with another active subcategory", 409);
+      if (occupied && !occupied.isActive && occupied.id !== old.id) {
+        const mx = await prisma.assessmentSubcategory.aggregate({
           where: { categoryId },
           _max: { displayOrder: true },
         });
-        const bump = (maxAgg._max.displayOrder ?? 0) + 10_000;
-        await tx.assessmentSubcategory.update({
-          where: { id: old.id },
-          data: { isActive: false, displayOrder: bump },
+        await prisma.assessmentSubcategory.update({
+          where: { id: occupied.id },
+          data: { displayOrder: (mx._max.displayOrder ?? 0) + 10_000 },
         });
+      }
 
-        const occupied = await tx.assessmentSubcategory.findUnique({
-          where: {
-            categoryId_displayOrder: { categoryId, displayOrder },
-          },
-        });
-        if (occupied?.isActive) throw new HttpError("display_order clashes with another active subcategory", 409);
-        if (occupied && !occupied.isActive && occupied.id !== old.id) {
-          const mx = await tx.assessmentSubcategory.aggregate({
-            where: { categoryId },
-            _max: { displayOrder: true },
-          });
-          await tx.assessmentSubcategory.update({
-            where: { id: occupied.id },
-            data: { displayOrder: (mx._max.displayOrder ?? 0) + 10_000 },
-          });
-        }
-
-        return tx.assessmentSubcategory.create({
-          data: {
-            categoryId,
-            name,
-            description,
-            maxScore,
-            displayOrder,
-            weightWithinCategory: w === null || w === undefined ? undefined : new Prisma.Decimal(w),
-            isActive: true,
-          },
-        });
+      const row = await prisma.assessmentSubcategory.create({
+        data: {
+          categoryId,
+          name,
+          description,
+          maxScore,
+          displayOrder,
+          weightWithinCategory: w === null || w === undefined ? undefined : new Prisma.Decimal(w),
+          isActive: true,
+        },
       });
 
       res.json(row);

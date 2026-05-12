@@ -153,17 +153,16 @@ router.post("/", requireRoles(UserRole.supervisor), async (req, res, next) => {
 
     const supervisorId = req.user!.id;
 
-    const mapping = await prisma.$transaction(async (tx) => {
-      await tx.sfhBranchMapping.updateMany({
+    const [, , mapping] = await prisma.$transaction([
+      prisma.sfhBranchMapping.updateMany({
         where: { branchId, approvalStatus: ApprovalStatus.pending },
         data: {
           approvalStatus: ApprovalStatus.rejected,
           approvalRemarks: "Superseded by direct remap",
           approvedById: supervisorId,
         },
-      });
-
-      await tx.sfhBranchMapping.updateMany({
+      }),
+      prisma.sfhBranchMapping.updateMany({
         where: {
           branchId,
           isCurrent: true,
@@ -173,9 +172,8 @@ router.post("/", requireRoles(UserRole.supervisor), async (req, res, next) => {
           isCurrent: false,
           effectiveTo: new Date(),
         },
-      });
-
-      return tx.sfhBranchMapping.create({
+      }),
+      prisma.sfhBranchMapping.create({
         data: {
           sfhId,
           branchId,
@@ -184,8 +182,8 @@ router.post("/", requireRoles(UserRole.supervisor), async (req, res, next) => {
           effectiveFrom: effectiveDate,
           isCurrent: true,
         },
-      });
-    });
+      }),
+    ]);
 
     res.status(201).json(mapping);
   } catch (e) {
@@ -203,8 +201,8 @@ router.patch("/:id/approve", requireRoles(UserRole.supervisor), async (req, res,
       throw new HttpError("Only pending mappings can be approved", 400);
     }
 
-    await prisma.$transaction(async (tx) => {
-      await tx.sfhBranchMapping.updateMany({
+    await prisma.$transaction([
+      prisma.sfhBranchMapping.updateMany({
         where: {
           branchId: mapping.branchId,
           isCurrent: true,
@@ -214,9 +212,8 @@ router.patch("/:id/approve", requireRoles(UserRole.supervisor), async (req, res,
           isCurrent: false,
           effectiveTo: new Date(),
         },
-      });
-
-      await tx.sfhBranchMapping.update({
+      }),
+      prisma.sfhBranchMapping.update({
         where: { id: mapping.id },
         data: {
           isCurrent: true,
@@ -224,8 +221,8 @@ router.patch("/:id/approve", requireRoles(UserRole.supervisor), async (req, res,
           approvedById: req.user!.id,
           effectiveFrom: mapping.effectiveFrom ?? new Date(),
         },
-      });
-    });
+      }),
+    ]);
 
     res.json({ success: true, message: "Mapping approved and activated" });
   } catch (e) {

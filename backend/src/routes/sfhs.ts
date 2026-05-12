@@ -288,28 +288,26 @@ router.post("/", accountCreateLimiter, async (req, res, next) => {
     const passwordHash = await hashPassword(temporaryPassword);
     const supervisorPasswordEnc = encryptSfhSupervisorPasswordVault(temporaryPassword);
 
-    const result = await prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
-          name,
-          email,
-          passwordHash,
-          role: UserRole.sfh,
-          isActive: true,
-          emailVerifiedAt: new Date(),
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email,
+        passwordHash,
+        role: UserRole.sfh,
+        isActive: true,
+        emailVerifiedAt: new Date(),
+        stateFacilityHead: {
+          create: {
+            employeeCode: code,
+            phone: phone ?? null,
+            stateRegion,
+            supervisorPasswordEnc,
+          },
         },
-      });
-      const sfh = await tx.stateFacilityHead.create({
-        data: {
-          userId: user.id,
-          employeeCode: code,
-          phone: phone ?? null,
-          stateRegion,
-          supervisorPasswordEnc,
-        },
-      });
-      return { user, sfh };
+      },
+      include: { stateFacilityHead: true },
     });
+    const result = { user, sfh: user.stateFacilityHead! };
 
     await writeAudit({
       actorId: req.user!.id,
@@ -357,32 +355,33 @@ router.patch("/:id", async (req, res, next) => {
       }
     }
 
-    await prisma.$transaction(async (tx) => {
-      const sfh = await tx.stateFacilityHead.findUnique({
-        where: { id },
-        select: { id: true, userId: true, user: { select: { id: true } } },
-      });
-      if (!sfh) throw new HttpError("SFH not found", 404);
-
-      const sData: Prisma.StateFacilityHeadUpdateInput = {};
-      if (body.phone !== undefined) sData.phone = body.phone || null;
-      if (body.stateRegion !== undefined) sData.stateRegion = body.stateRegion;
-      if (body.employeeId !== undefined) {
-        sData.employeeCode = normalizeSfhEmployeeCode(body.employeeId);
-      }
-
-      const uData: Prisma.UserUpdateInput = {};
-      if (body.name !== undefined) uData.name = body.name;
-      if (body.isActive !== undefined) uData.isActive = body.isActive;
-      if (body.employeeId !== undefined) {
-        uData.email = syntheticEmailFromEmployeeCode(normalizeSfhEmployeeCode(body.employeeId));
-      }
-
-      await tx.stateFacilityHead.update({ where: { id }, data: sData });
-      if (Object.keys(uData).length > 0) {
-        await tx.user.update({ where: { id: sfh.userId }, data: uData });
-      }
+    const sfhForUpdate = await prisma.stateFacilityHead.findUnique({
+      where: { id },
+      select: { id: true, userId: true },
     });
+    if (!sfhForUpdate) throw new HttpError("SFH not found", 404);
+
+    const sData: Prisma.StateFacilityHeadUpdateInput = {};
+    if (body.phone !== undefined) sData.phone = body.phone || null;
+    if (body.stateRegion !== undefined) sData.stateRegion = body.stateRegion;
+    if (body.employeeId !== undefined) {
+      sData.employeeCode = normalizeSfhEmployeeCode(body.employeeId);
+    }
+
+    const uData: Prisma.UserUpdateInput = {};
+    if (body.name !== undefined) uData.name = body.name;
+    if (body.isActive !== undefined) uData.isActive = body.isActive;
+    if (body.employeeId !== undefined) {
+      uData.email = syntheticEmailFromEmployeeCode(normalizeSfhEmployeeCode(body.employeeId));
+    }
+
+    const ops: Parameters<typeof prisma.$transaction>[0] = [
+      prisma.stateFacilityHead.update({ where: { id }, data: sData }),
+    ];
+    if (Object.keys(uData).length > 0) {
+      ops.push(prisma.user.update({ where: { id: sfhForUpdate.userId }, data: uData }));
+    }
+    await prisma.$transaction(ops);
 
     const updated = await prisma.stateFacilityHead.findUnique({
       where: { id },

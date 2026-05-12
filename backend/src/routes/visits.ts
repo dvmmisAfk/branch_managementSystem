@@ -144,28 +144,27 @@ router.put("/:id/scores", requireRoles(UserRole.sfh), async (req, res, next) => 
   try {
     const visit = await assertVisitEditableDraft(req.params.id, req.user!);
     const rows = z.array(scoreRow).min(1).parse(req.body);
-    await prisma.$transaction(async (tx) => {
-      for (const r of rows) {
-        const row = await tx.visitScore.findUnique({
-          where: { visitId_subcategoryId: { visitId: visit.id, subcategoryId: r.subcategoryId } },
-        });
-        if (!row) throw new HttpError(`Unknown score row for subcategory ${r.subcategoryId}`, 400);
-        let sg = r.scoreGiven ?? null;
-        if (r.status === ScoreStatus.not_applicable) sg = null;
-        else if (sg === null || sg === undefined) throw new HttpError("scoreGiven required unless NA", 400);
-        if (sg !== null && sg > row.maxScore) throw new HttpError(`Score exceeds max (${row.maxScore})`, 400);
-        await tx.visitScore.update({
-          where: { id: row.id },
-          data: {
-            status: r.status,
-            scoreGiven: sg,
-            observations: r.observations ?? undefined,
-            remsNumber: r.remsNumber ?? undefined,
-            remarks: r.remarks ?? undefined,
-          },
-        });
-      }
+    const existingScores = await prisma.visitScore.findMany({ where: { visitId: visit.id } });
+    const scoreMap = new Map(existingScores.map((s) => [s.subcategoryId, s]));
+    const updates = rows.map((r) => {
+      const row = scoreMap.get(r.subcategoryId);
+      if (!row) throw new HttpError(`Unknown score row for subcategory ${r.subcategoryId}`, 400);
+      let sg = r.scoreGiven ?? null;
+      if (r.status === ScoreStatus.not_applicable) sg = null;
+      else if (sg === null || sg === undefined) throw new HttpError("scoreGiven required unless NA", 400);
+      if (sg !== null && sg > row.maxScore) throw new HttpError(`Score exceeds max (${row.maxScore})`, 400);
+      return prisma.visitScore.update({
+        where: { id: row.id },
+        data: {
+          status: r.status,
+          scoreGiven: sg,
+          observations: r.observations ?? undefined,
+          remsNumber: r.remsNumber ?? undefined,
+          remarks: r.remarks ?? undefined,
+        },
+      });
     });
+    await prisma.$transaction(updates);
     await recalculateScoreSnapshotForVisit(visit.id);
     const snap = await prisma.scoreSnapshot.findUnique({ where: { visitId: visit.id } });
     res.json({ ok: true, scoreSnapshot: snap });

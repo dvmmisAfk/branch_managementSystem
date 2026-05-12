@@ -84,47 +84,42 @@ export async function createVisitDraft(opts: {
     orderBy: [{ category: { displayOrder: "asc" } }, { displayOrder: "asc" }],
   });
 
-  const visit = await prisma.$transaction(async (tx) => {
-    const v = await tx.branchVisit.create({
-      data: {
-        branchId: opts.branchId,
-        sfhId: opts.sfhId,
-        quarterId: opts.quarterId,
-        mappingId: mapping?.id ?? null,
-        visitType: "physical",
-        previousVisitDate: prev?.visitDateActual ?? prev?.submittedAt ?? null,
-        previousVisitScore:
-          prev?.scoreSnapshot ?
-            prev.scoreSnapshot.scorePercentage
-          : null,
-        boiNameSnapshot: branch.boiName ?? null,
-        locationHeadSnapshot: branch.branchManagerName ?? null,
-        branchOpsInchargeSnapshot: branch.branchOperationIncharge ?? null,
-        staffOutsourceSnapshot: branch.staffOutsource,
-        staffCompanySnapshot: branch.staffCompanyRoll,
-        staffHkResourcesSnapshot: branch.staffHkResources,
-        staffTalicEmployeesSnapshot: branch.staffTalicEmployees,
-        workstationsLinearSnapshot: branch.workstationsLinear,
-        workstationsLshapeSnapshot: branch.workstationsLshape,
-        workstationsCubicalSnapshot: branch.workstationsCubical,
-      },
-    });
-
-    for (const sub of subs) {
-      await tx.visitScore.create({
-        data: {
-          visitId: v.id,
-          subcategoryId: sub.id,
-          status: ScoreStatus.not_applicable,
-          scoreGiven: null,
-          maxScore: sub.maxScore,
-          observations: null,
-          remsNumber: null,
-          remarks: null,
+  const visit = await prisma.branchVisit.create({
+    data: {
+      branchId: opts.branchId,
+      sfhId: opts.sfhId,
+      quarterId: opts.quarterId,
+      mappingId: mapping?.id ?? null,
+      visitType: "physical",
+      previousVisitDate: prev?.visitDateActual ?? prev?.submittedAt ?? null,
+      previousVisitScore:
+        prev?.scoreSnapshot ?
+          prev.scoreSnapshot.scorePercentage
+        : null,
+      boiNameSnapshot: branch.boiName ?? null,
+      locationHeadSnapshot: branch.branchManagerName ?? null,
+      branchOpsInchargeSnapshot: branch.branchOperationIncharge ?? null,
+      staffOutsourceSnapshot: branch.staffOutsource,
+      staffCompanySnapshot: branch.staffCompanyRoll,
+      staffHkResourcesSnapshot: branch.staffHkResources,
+      staffTalicEmployeesSnapshot: branch.staffTalicEmployees,
+      workstationsLinearSnapshot: branch.workstationsLinear,
+      workstationsLshapeSnapshot: branch.workstationsLshape,
+      workstationsCubicalSnapshot: branch.workstationsCubical,
+      scores: {
+        createMany: {
+          data: subs.map((sub) => ({
+            subcategoryId: sub.id,
+            status: ScoreStatus.not_applicable,
+            scoreGiven: null,
+            maxScore: sub.maxScore,
+            observations: null,
+            remsNumber: null,
+            remarks: null,
+          })),
         },
-      });
-    }
-    return v;
+      },
+    },
   });
 
   return visit;
