@@ -375,13 +375,10 @@ router.patch("/:id", async (req, res, next) => {
       uData.email = syntheticEmailFromEmployeeCode(normalizeSfhEmployeeCode(body.employeeId));
     }
 
-    const ops: Parameters<typeof prisma.$transaction>[0] = [
-      prisma.stateFacilityHead.update({ where: { id }, data: sData }),
-    ];
+    await prisma.stateFacilityHead.update({ where: { id }, data: sData });
     if (Object.keys(uData).length > 0) {
-      ops.push(prisma.user.update({ where: { id: sfhForUpdate.userId }, data: uData }));
+      await prisma.user.update({ where: { id: sfhForUpdate.userId }, data: uData });
     }
-    await prisma.$transaction(ops);
 
     const updated = await prisma.stateFacilityHead.findUnique({
       where: { id },
