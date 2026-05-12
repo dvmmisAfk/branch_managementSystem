@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { ApprovalStatus, IssueStatus, Prisma, ScoreStatus, UserRole, VisitType } from "@prisma/client";
+import { IssueStatus, Prisma, ScoreStatus, UserRole, VisitType } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { authenticate } from "../middleware/authenticate.js";
@@ -16,7 +16,7 @@ import {
 } from "../services/visit.service.js";
 import { recalculateScoreSnapshotForVisit } from "../services/scoreCalculation.service.js";
 import { buildVisitPdfFromModel } from "../services/pdfGeneration.service.js";
-import { buildVisitExcelBuffer } from "../services/excelExport.service.js";
+import { buildVisitExcelBuffer, buildIssuesSummarySheet } from "../services/excelExport.service.js";
 import { loadVisitPdfModel } from "../services/visitReportLoader.service.js";
 import { branchVisitScalarCore, queryVisitDetail } from "../queries/branchVisitDetail.query.js";
 
@@ -286,6 +286,35 @@ router.get("/:id/excel", async (req, res, next) => {
     const slug = `${model.branch.branchCode}-${(model.quarter.label ?? `Q${model.quarter.quarterNumber}`).replace(/\s+/g, "-")}`;
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     res.setHeader("Content-Disposition", `attachment; filename="branch-visit-${slug}.xlsx"`);
+    res.send(buf);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.get("/:id/issues-excel", async (req, res, next) => {
+  try {
+    const visit = await assertVisitReadable(req.params.id, req.user!);
+    const issues = await prisma.visitIssue.findMany({
+      where: { visitId: visit.id },
+      include: { category: true },
+      orderBy: { createdAt: "asc" },
+    });
+    const buf = await buildIssuesSummarySheet(
+      issues.map((i) => ({
+        branchName: visit.branch.branchName,
+        branchCode: visit.branch.branchCode,
+        visitDate: visit.visitDateActual ? new Date(visit.visitDateActual).toISOString().slice(0, 10) : null,
+        category: i.category.name,
+        description: i.issueDescription,
+        closure: i.scheduledClosureDate ? new Date(i.scheduledClosureDate).toISOString().slice(0, 10) : null,
+        status: i.issueStatus,
+      })),
+      { reportTitle: `Issues — ${visit.branch.branchCode}`, subtitle: visit.quarter.label ?? "" },
+    );
+    const slug = `${visit.branch.branchCode}-issues`;
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="${slug}.xlsx"`);
     res.send(buf);
   } catch (e) {
     next(e);

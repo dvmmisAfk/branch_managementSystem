@@ -389,7 +389,7 @@ export function VisitDetailPage() {
     try {
       await apiFetch(`/visits/${id}/issues`, {
         method: "POST",
-        body: JSON.stringify({ category_id: v.category_id, issue_description: v.issue_description, scheduled_closure_date: v.scheduled_closure_date || undefined }),
+        body: JSON.stringify({ categoryId: v.category_id, issue_description: v.issue_description, scheduled_closure_date: v.scheduled_closure_date || undefined }),
       });
       void message.success("Issue added");
       issueForm.resetFields();

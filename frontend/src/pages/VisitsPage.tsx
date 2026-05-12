@@ -75,6 +75,7 @@ export function VisitsPage() {
   }, []);
 
   useEffect(() => {
+    if (filter === "edit_requests") return;
     let cancelled = false;
     setBusy(true);
     const q = filter === "draft" ? "?status=draft" : filter === "submitted" ? "?status=submitted" : "";
