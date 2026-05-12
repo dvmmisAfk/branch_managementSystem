@@ -29,6 +29,12 @@ enum VisitType {
   virtual
 }
 
+enum EditRequestStatus {
+  pending
+  approved
+  rejected
+}
+
 enum ScoreStatus {
   yes
   no
@@ -79,6 +85,7 @@ model User {
   emailVerificationTokens        EmailVerificationToken[]
   sfhPasswordResetRequests       SfhPasswordResetRequest[] @relation("SfhPwdResetUser")
   fulfilledSfhPasswordResets      SfhPasswordResetRequest[] @relation("SfhPwdResetFulfilledBy")
+  reviewedEditRequests           VisitEditRequest[]         @relation("EditRequestReviewer")
 
   @@map("users")
 }
@@ -151,9 +158,10 @@ model StateFacilityHead {
   supervisorPasswordEnc String? @map("supervisor_password_enc")
   createdAt     DateTime @default(now()) @map("created_at")
 
-  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  mappings SfhBranchMapping[]
-  visits   BranchVisit[]
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mappings     SfhBranchMapping[]
+  visits       BranchVisit[]
+  editRequests VisitEditRequest[]
 
   @@map("state_facility_heads")
 }
@@ -321,6 +329,7 @@ model BranchVisit {
   scores        VisitScore[]
   issues        VisitIssue[]
   scoreSnapshot ScoreSnapshot?
+  editRequests  VisitEditRequest[]
 
   @@unique([branchId, quarterId])
   @@index([sfhId, isSubmitted])
@@ -393,4 +402,23 @@ model UtilityConsumption {
 
   @@unique([branchId, financialYear, quarterNumber])
   @@map("utility_consumption")
+}
+
+model VisitEditRequest {
+  id           String            @id @default(uuid()) @db.Uuid
+  visitId      String            @map("visit_id") @db.Uuid
+  sfhId        String            @map("sfh_id") @db.Uuid
+  reason       String
+  status       EditRequestStatus @default(pending)
+  reviewedById String?           @map("reviewed_by_id") @db.Uuid
+  reviewedAt   DateTime?         @map("reviewed_at")
+  createdAt    DateTime          @default(now()) @map("created_at")
+
+  visit      BranchVisit       @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  sfh        StateFacilityHead @relation(fields: [sfhId], references: [id], onDelete: Cascade)
+  reviewedBy User?             @relation("EditRequestReviewer", fields: [reviewedById], references: [id])
+
+  @@index([visitId])
+  @@index([status])
+  @@map("visit_edit_requests")
 }

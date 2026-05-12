@@ -23,6 +23,8 @@ async function mappedBranchIds(sfhScope?: string) {
     where: {
       isCurrent: true,
       approvalStatus: ApprovalStatus.approved,
+      branch: { isActive: true },
+      sfh: { user: { isActive: true } },
       ...(sfhScope ? { sfhId: sfhScope } : {}),
     },
     select: { branchId: true },
@@ -36,6 +38,8 @@ async function submittedBranchCountForQuarter(quarterId: string, sfhScope?: stri
     where: {
       quarterId,
       isSubmitted: true,
+      branch: { isActive: true },
+      sfh: { user: { isActive: true } },
       ...(sfhScope ? { sfhId: sfhScope } : {}),
     },
   });
@@ -46,11 +50,11 @@ async function issueCountsForSfh(sfhId: string) {
   const openIssues = await prisma.visitIssue.count({
     where: {
       issueStatus: { in: [IssueStatus.open, IssueStatus.in_progress] },
-      visit: { sfhId },
+      visit: { sfhId, branch: { isActive: true } },
     },
   });
   const resolvedIssues = await prisma.visitIssue.count({
-    where: { issueStatus: IssueStatus.resolved, visit: { sfhId } },
+    where: { issueStatus: IssueStatus.resolved, visit: { sfhId, branch: { isActive: true } } },
   });
   return { openIssues, resolvedIssues };
 }
@@ -65,10 +69,10 @@ async function buildSfhStatRow(sfId: string, cqId: string) {
     where: { id: sfId },
     select: { user: { select: { name: true } } },
   });
-  const completionPct = totalBranches === 0 ? 0 : Math.round(((visited / totalBranches) * 10000)) / 100;
+  const completionPct = totalBranches === 0 ? 0 : Math.round((visited / totalBranches) * 10000) / 100;
   let avgScore: number | null = null;
   const snaps = await prisma.scoreSnapshot.findMany({
-    where: { visit: { quarterId: cqId, sfhId: sfId, isSubmitted: true } },
+    where: { visit: { quarterId: cqId, sfhId: sfId, isSubmitted: true, branch: { isActive: true } } },
     select: { scorePercentage: true },
   });
   if (snaps.length) {
@@ -117,13 +121,7 @@ router.get("/sfh", requireRoles(UserRole.sfh), async (req, res, next) => {
     const sfh_stat = await buildSfhStatRow(sfh.id, cq.id);
     const qb = await fyQuarterBreakdown(sfh.id, cq.financialYear);
     res.json({
-      current_quarter: {
-        label: cq.label,
-        id: cq.id,
-        financial_year: cq.financialYear,
-        start: cq.startDate,
-        end: cq.endDate,
-      },
+      current_quarter: { label: cq.label, id: cq.id, financial_year: cq.financialYear, start: cq.startDate, end: cq.endDate },
       sfh_stats: [sfh_stat],
       quarterly_breakdown: qb,
     });
@@ -139,13 +137,7 @@ router.get("/sfh/:sfhId", requireRoles(UserRole.supervisor), async (req, res, ne
     const sfh_stat = await buildSfhStatRow(req.params.sfhId, cq.id);
     const qb = await fyQuarterBreakdown(req.params.sfhId, cq.financialYear);
     res.json({
-      current_quarter: {
-        label: cq.label,
-        id: cq.id,
-        financial_year: cq.financialYear,
-        start: cq.startDate,
-        end: cq.endDate,
-      },
+      current_quarter: { label: cq.label, id: cq.id, financial_year: cq.financialYear, start: cq.startDate, end: cq.endDate },
       sfh_stats: [sfh_stat],
       quarterly_breakdown: qb,
     });
@@ -154,16 +146,14 @@ router.get("/sfh/:sfhId", requireRoles(UserRole.supervisor), async (req, res, ne
   }
 });
 
-router.get("/supervisor", requireRoles(UserRole.supervisor), async (req, res, next) => {
+router.get("/supervisor", requireRoles(UserRole.supervisor), async (_req, res, next) => {
   try {
     const cq = await currentQuarterHeader();
     if (!cq) throw new HttpError("No quarter configured", 500);
 
     const allSfhs = await prisma.stateFacilityHead.findMany({
-      select: {
-        id: true,
-        user: { select: { email: true, name: true } },
-      },
+      where: { user: { isActive: true } },
+      select: { id: true, user: { select: { email: true, name: true } } },
     });
 
     const sfh_stats = [];
@@ -177,13 +167,7 @@ router.get("/supervisor", requireRoles(UserRole.supervisor), async (req, res, ne
     const visitedOrg = await submittedBranchCountForQuarter(cq.id);
 
     res.json({
-      current_quarter: {
-        label: cq.label,
-        id: cq.id,
-        financial_year: cq.financialYear,
-        start: cq.startDate,
-        end: cq.endDate,
-      },
+      current_quarter: { label: cq.label, id: cq.id, financial_year: cq.financialYear, start: cq.startDate, end: cq.endDate },
       sfh_stats,
       quarterly_breakdown: qb,
       org_completion_hint: mappedOrg.size ? Math.round((visitedOrg / mappedOrg.size) * 10000) / 100 : 0,

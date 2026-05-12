@@ -1,5 +1,5 @@
-import { App, Button, Input, Modal, Select, Table, Tabs, Typography } from "antd";
-import { Plus, Search, ClipboardX, Video, MapPin as MapPinIcon } from "lucide-react";
+import { App, Button, Input, Modal, Select, Table, Tabs, Tag, Typography } from "antd";
+import { Plus, Search, ClipboardX, Video, MapPin as MapPinIcon, RotateCcw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import type { ColumnsType } from "antd/es/table";
 import { useNavigate } from "react-router-dom";
@@ -18,6 +18,16 @@ type VisitRow = {
   scoreSnapshot?: { scoreBand?: string | null; scorePercentage?: unknown } | null;
 };
 
+type EditRequestRow = {
+  id: string;
+  visitId: string;
+  status: "pending" | "approved" | "rejected";
+  reason: string;
+  createdAt: string;
+  visit: { id: string; branch: { branchCode: string; branchName: string }; quarter: { label: string | null } };
+  sfh: { id: string; user: { name: string } };
+};
+
 type Me = { id: string; email: string; name: string; role: string };
 type BranchOpt = { id: string; branchCode: string; branchName: string };
 type QuarterRow = { id: string; label: string | null; financialYear: number; quarterNumber: number; startDate: string; endDate: string };
@@ -31,7 +41,7 @@ export function VisitsPage() {
   const [me, setMe] = useState<Me | null>(null);
   const [busy, setBusy] = useState(true);
   const [rows, setRows] = useState<VisitRow[]>([]);
-  const [filter, setFilter] = useState<"all" | "draft" | "submitted">("all");
+  const [filter, setFilter] = useState<"all" | "draft" | "submitted" | "edit_requests">("all");
   const [search, setSearch] = useState("");
 
   const [newOpen, setNewOpen] = useState(false);
@@ -43,6 +53,12 @@ export function VisitsPage() {
   const [pickBranch, setPickBranch] = useState<string | undefined>();
   const [pickQuarter, setPickQuarter] = useState<string | undefined>();
   const { pagination, resetPaging } = useTablePagination(rows.length);
+  const [editRequests, setEditRequests] = useState<EditRequestRow[]>([]);
+  const [editReqBusy, setEditReqBusy] = useState(false);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectTarget, setRejectTarget] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [actionBusy, setActionBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -86,6 +102,17 @@ export function VisitsPage() {
   useEffect(() => { resetPaging(); }, [filter, resetPaging]);
 
   useEffect(() => {
+    if (me?.role !== "supervisor") return;
+    let cancelled = false;
+    setEditReqBusy(true);
+    apiFetch<EditRequestRow[]>("/edit-requests")
+      .then((data) => { if (!cancelled) setEditRequests(data); })
+      .catch(() => { if (!cancelled) setEditRequests([]); })
+      .finally(() => { if (!cancelled) setEditReqBusy(false); });
+    return () => { cancelled = true; };
+  }, [me?.role]);
+
+  useEffect(() => {
     const t = window.setTimeout(() => {
       setBranchBusy(true);
       apiFetch<BranchOpt[]>(`/branches?q=${encodeURIComponent(branchQ)}`)
@@ -110,6 +137,43 @@ export function VisitsPage() {
       })
       .catch(() => setQuarters([]));
   }, []);
+
+  async function approveRequest(id: string) {
+    setActionBusy(true);
+    try {
+      await apiFetch(`/edit-requests/${id}/approve`, { method: "PATCH" });
+      void message.success("Edit request approved — visit reverted to draft");
+      setEditRequests((prev) => prev.map((r) => r.id === id ? { ...r, status: "approved" } : r));
+    } catch (e: unknown) {
+      void message.error(e instanceof Error ? e.message : "Failed to approve");
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
+  function openReject(id: string) {
+    setRejectTarget(id);
+    setRejectReason("");
+    setRejectOpen(true);
+  }
+
+  async function confirmReject() {
+    if (!rejectTarget) return;
+    setActionBusy(true);
+    try {
+      await apiFetch(`/edit-requests/${rejectTarget}/reject`, {
+        method: "PATCH",
+        body: JSON.stringify({ reason: rejectReason }),
+      });
+      void message.success("Edit request rejected");
+      setEditRequests((prev) => prev.map((r) => r.id === rejectTarget ? { ...r, status: "rejected" } : r));
+      setRejectOpen(false);
+    } catch (e: unknown) {
+      void message.error(e instanceof Error ? e.message : "Failed to reject");
+    } finally {
+      setActionBusy(false);
+    }
+  }
 
   async function createVisit() {
     if (!pickBranch || !pickQuarter) { void message.warning("Choose branch and quarter"); return; }
@@ -242,43 +306,167 @@ export function VisitsPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12, flexWrap: "wrap" }}>
         <Tabs
           activeKey={filter}
-          onChange={(k) => setFilter(k as typeof filter)}
+          onChange={(k) => { setFilter(k as typeof filter); resetPaging(); }}
           items={[
             { key: "all", label: "All" },
             { key: "draft", label: "Drafts" },
             { key: "submitted", label: "Submitted" },
+            ...(me?.role === "supervisor"
+              ? [{
+                  key: "edit_requests",
+                  label: (
+                    <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <RotateCcw size={13} />
+                      Edit Requests
+                      {editRequests.filter((r) => r.status === "pending").length > 0 && (
+                        <Tag color="orange" style={{ marginLeft: 2, fontSize: 11, lineHeight: "16px", padding: "0 5px" }}>
+                          {editRequests.filter((r) => r.status === "pending").length}
+                        </Tag>
+                      )}
+                    </span>
+                  ),
+                }]
+              : []),
           ]}
           style={{ marginBottom: 0, flex: "1 1 auto", minWidth: 0 }}
         />
-        <Input
-          prefix={<Search size={14} style={{ color: "#9CA3AF" }} />}
-          placeholder="Branch name or code..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ height: 36, flex: "1 1 200px", minWidth: 0, maxWidth: 420 }}
-          allowClear
-        />
+        {filter !== "edit_requests" && (
+          <Input
+            prefix={<Search size={14} style={{ color: "#9CA3AF" }} />}
+            placeholder="Branch name or code..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ height: 36, flex: "1 1 200px", minWidth: 0, maxWidth: 420 }}
+            allowClear
+          />
+        )}
       </div>
 
-      <Table<VisitRow>
-        rowKey="id"
-        loading={busy}
-        columns={columns}
-        dataSource={filtered}
-        pagination={pagination}
-        scroll={{ x: true }}
-        onRow={(r) => ({ onClick: () => navigate(`/visits/${r.id}`), style: { cursor: "pointer" } })}
-        locale={{
-          emptyText: (
-            <EmptyState
-              icon={<ClipboardX />}
-              title="No visits found"
-              subtitle={filter !== "all" ? `No ${filter} visits yet` : "No visits have been created yet"}
-            />
-          ),
-        }}
-        size="middle"
-      />
+      {filter === "edit_requests" ? (
+        <Table<EditRequestRow>
+          rowKey="id"
+          loading={editReqBusy}
+          dataSource={editRequests}
+          scroll={{ x: true }}
+          size="middle"
+          pagination={{ pageSize: 10, showSizeChanger: false }}
+          locale={{ emptyText: <EmptyState icon={<RotateCcw />} title="No edit requests" subtitle="No SFHs have requested edits yet" /> }}
+          columns={[
+            {
+              title: "Branch",
+              key: "branch",
+              render: (_, r) => (
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: "#111827" }}>{r.visit.branch.branchName}</div>
+                  <div style={{ fontSize: 12, color: "#6B7280" }}>{r.visit.branch.branchCode}</div>
+                </div>
+              ),
+            },
+            {
+              title: "Quarter",
+              key: "quarter",
+              render: (_, r) => <span style={{ fontSize: 13, color: "#374151" }}>{r.visit.quarter.label ?? "—"}</span>,
+            },
+            {
+              title: "SFH",
+              key: "sfh",
+              render: (_, r) => <span style={{ fontSize: 13, color: "#374151" }}>{r.sfh.user.name}</span>,
+            },
+            {
+              title: "Reason",
+              key: "reason",
+              render: (_, r) => <span style={{ fontSize: 13, color: "#374151" }}>{r.reason}</span>,
+            },
+            {
+              title: "Requested",
+              key: "createdAt",
+              render: (_, r) => <span style={{ fontSize: 13, color: "#6B7280" }}>{fmtDate(r.createdAt)}</span>,
+            },
+            {
+              title: "Status",
+              key: "status",
+              render: (_, r) =>
+                r.status === "pending" ? (
+                  <Tag color="orange">Pending</Tag>
+                ) : r.status === "approved" ? (
+                  <Tag color="green">Approved</Tag>
+                ) : (
+                  <Tag color="red">Rejected</Tag>
+                ),
+            },
+            {
+              title: "Actions",
+              key: "actions",
+              render: (_, r) =>
+                r.status === "pending" ? (
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <Button
+                      type="primary"
+                      size="small"
+                      loading={actionBusy}
+                      onClick={() => void approveRequest(r.id)}
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      danger
+                      size="small"
+                      disabled={actionBusy}
+                      onClick={() => openReject(r.id)}
+                    >
+                      Reject
+                    </Button>
+                  </div>
+                ) : (
+                  <span style={{ fontSize: 13, color: "#9CA3AF" }}>—</span>
+                ),
+            },
+          ]}
+        />
+      ) : (
+        <Table<VisitRow>
+          rowKey="id"
+          loading={busy}
+          columns={columns}
+          dataSource={filtered}
+          pagination={pagination}
+          scroll={{ x: true }}
+          onRow={(r) => ({ onClick: () => navigate(`/visits/${r.id}`), style: { cursor: "pointer" } })}
+          locale={{
+            emptyText: (
+              <EmptyState
+                icon={<ClipboardX />}
+                title="No visits found"
+                subtitle={filter !== "all" ? `No ${filter} visits yet` : "No visits have been created yet"}
+              />
+            ),
+          }}
+          size="middle"
+        />
+      )}
+
+      {/* Reject reason modal */}
+      <Modal
+        title="Reject Edit Request"
+        open={rejectOpen}
+        onCancel={() => setRejectOpen(false)}
+        onOk={() => void confirmReject()}
+        confirmLoading={actionBusy}
+        okText="Reject"
+        okButtonProps={{ danger: true, style: { height: 38 } }}
+        cancelButtonProps={{ style: { height: 38 } }}
+        destroyOnHidden
+      >
+        <Typography.Paragraph type="secondary" style={{ marginTop: 0 }}>
+          Optionally provide a reason for rejecting this edit request.
+        </Typography.Paragraph>
+        <Input.TextArea
+          rows={3}
+          placeholder="Rejection reason (optional)..."
+          value={rejectReason}
+          onChange={(e) => setRejectReason(e.target.value)}
+        />
+      </Modal>
 
       {/* New visit modal */}
       <Modal

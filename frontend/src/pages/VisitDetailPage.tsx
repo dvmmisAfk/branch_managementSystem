@@ -5,7 +5,7 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import {
   ArrowLeft, Plus, FileText, FileSpreadsheet, CheckCircle2,
-  AlertTriangle, Lock, Unlock, Info, Trash2, Pencil,
+  AlertTriangle, Lock, Unlock, Info, Trash2, Pencil, RotateCcw,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -152,6 +152,10 @@ export function VisitDetailPage() {
   const [overviewDirty, setOverviewDirty] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [deleteIssueId, setDeleteIssueId] = useState<string | null>(null);
+  const [editReqOpen, setEditReqOpen] = useState(false);
+  const [editReqReason, setEditReqReason] = useState("");
+  const [editReqSubmitting, setEditReqSubmitting] = useState(false);
+  const [pendingEditReq, setPendingEditReq] = useState<{ id: string; status: string } | null>(null);
 
   const canEdit = me?.role === "sfh" && visit && !visit.isSubmitted && visit.sfh?.userId === me.id;
   const isSupervisor = me?.role === "supervisor";
@@ -164,6 +168,16 @@ export function VisitDetailPage() {
       const [profile, v] = await Promise.all([apiFetch<Me>("/auth/me"), apiFetch<VisitFull>(`/visits/${id}`)]);
       setMe(profile);
       setVisit(v);
+      if (v.isSubmitted) {
+        apiFetch<Array<{ id: string; visitId: string; status: string }>>("/edit-requests")
+          .then((reqs) => {
+            const mine = reqs.find((r) => r.visitId === id && r.status === "pending");
+            setPendingEditReq(mine ? { id: mine.id, status: mine.status } : null);
+          })
+          .catch(() => setPendingEditReq(null));
+      } else {
+        setPendingEditReq(null);
+      }
       setScoreDrafts(v.scores.map((s) => ({ ...s })));
       setVisitTypeLocal(v.visitType);
       setOverviewDirty(false);
@@ -331,6 +345,28 @@ export function VisitDetailPage() {
     });
   }
 
+  async function submitEditRequest() {
+    if (!id || !editReqReason.trim() || editReqReason.trim().length < 10) {
+      void message.warning("Please provide a reason of at least 10 characters");
+      return;
+    }
+    setEditReqSubmitting(true);
+    try {
+      await apiFetch("/edit-requests", {
+        method: "POST",
+        body: JSON.stringify({ visitId: id, reason: editReqReason.trim() }),
+      });
+      void message.success("Edit request sent to supervisor");
+      setEditReqOpen(false);
+      setEditReqReason("");
+      await reload();
+    } catch (e) {
+      void message.error(e instanceof Error ? e.message : "Failed to submit request");
+    } finally {
+      setEditReqSubmitting(false);
+    }
+  }
+
   async function download(kind: "pdf" | "excel" | "issues-excel") {
     if (!id) return;
     try {
@@ -410,14 +446,28 @@ export function VisitDetailPage() {
             <span style={{ fontSize: 13, color: "#6B7280" }}>SFH: {visit.sfh.user.name}</span>
           )}
         </div>
-        {snap && (
-          <div style={{ textAlign: "center" }}>
-            <div style={{ width: 52, height: 52, borderRadius: "50%", border: `3px solid ${bandColor(snap.scoreBand)}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontSize: 15, fontWeight: 700, color: bandColor(snap.scoreBand) }}>{fmtPct(snap.scorePercentage as number)}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          {/* Request Edit button — SFH on submitted visit */}
+          {me?.role === "sfh" && visit.isSubmitted && (
+            pendingEditReq ? (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 500, color: "#D97706", background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 8, padding: "6px 12px" }}>
+                <RotateCcw size={13} /> Edit request pending
+              </span>
+            ) : (
+              <Button icon={<RotateCcw size={13} />} onClick={() => setEditReqOpen(true)} style={{ height: 36, fontSize: 13 }}>
+                Request Edit
+              </Button>
+            )
+          )}
+          {snap && (
+            <div style={{ textAlign: "center" }}>
+              <div style={{ width: 52, height: 52, borderRadius: "50%", border: `3px solid ${bandColor(snap.scoreBand)}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ fontSize: 15, fontWeight: 700, color: bandColor(snap.scoreBand) }}>{fmtPct(snap.scorePercentage as number)}</span>
+              </div>
+              <div style={{ marginTop: 4 }}><ScoreBandBadge band={snap.scoreBand} /></div>
             </div>
-            <div style={{ marginTop: 4 }}><ScoreBandBadge band={snap.scoreBand} /></div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Tabs */}
@@ -1014,6 +1064,31 @@ export function VisitDetailPage() {
         cancelButtonProps={{ style: { height: 38 } }}
         width={400}>
         <p style={{ color: "#6B7280" }}>This will permanently remove the issue from the visit record.</p>
+      </Modal>
+
+      {/* Request Edit modal */}
+      <Modal
+        title="Request Edit Access"
+        open={editReqOpen}
+        onCancel={() => { setEditReqOpen(false); setEditReqReason(""); }}
+        onOk={() => void submitEditRequest()}
+        confirmLoading={editReqSubmitting}
+        okText="Send Request"
+        destroyOnHidden
+        width={460}
+      >
+        <Typography.Paragraph type="secondary" style={{ marginTop: 0 }}>
+          This will notify the supervisor. Once approved, the visit will revert to draft and you can make changes.
+        </Typography.Paragraph>
+        <div style={{ marginBottom: 4, fontSize: 13, fontWeight: 500, color: "#374151" }}>Reason for edit request</div>
+        <Input.TextArea
+          rows={4}
+          value={editReqReason}
+          onChange={(e) => setEditReqReason(e.target.value)}
+          placeholder="Describe what needs to be corrected (min 10 characters)..."
+          maxLength={500}
+          showCount
+        />
       </Modal>
 
       {/* Unlock date modal */}

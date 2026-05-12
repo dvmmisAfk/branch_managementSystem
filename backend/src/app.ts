@@ -21,6 +21,7 @@ import dashboardRoutes from "./routes/dashboard.js";
 import reportsRoutes from "./routes/reports.js";
 import issuesExportRoutes from "./routes/issuesExport.js";
 import aiRoutes from "./routes/ai.js";
+import editRequestRoutes from "./routes/editRequests.js";
 import { ensureQuartersAhead } from "./services/quarterBootstrap.service.js";
 
 /** Log unexpected failures; exit on uncaught exceptions (likely unrecoverable). */
@@ -87,6 +88,7 @@ api.use("/dashboard", dashboardRoutes);
 api.use("/reports", reportsRoutes);
 api.use("/issues", issuesExportRoutes);
 api.use("/ai", aiRoutes);
+api.use("/edit-requests", editRequestRoutes);
 
 app.use("/api/v1", apiLimiter, api);
 
