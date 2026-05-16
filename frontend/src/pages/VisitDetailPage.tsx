@@ -34,7 +34,7 @@ type VisitFull = {
   visitDateActual: string | null; visitDateLockedAt: string | null;
   reasonForNoVisit: string | null; virtualStaffContactName: string | null;
   virtualStaffContactPhone: string | null; boiNameSnapshot: string | null;
-  locationHeadSnapshot: string | null; branchOpsInchargeSnapshot: string | null;
+  locationHeadSnapshot: string | null;
   staffOutsourceSnapshot: number | null; staffCompanySnapshot: number | null;
   staffHkResourcesSnapshot: number | null; staffTalicEmployeesSnapshot: number | null;
   workstationsLinearSnapshot: number | null; workstationsLshapeSnapshot: number | null;
@@ -45,7 +45,14 @@ type VisitFull = {
   majorEscalation: boolean; escalationDetails: string | null;
   escalationClosureDate: string | null;
   previousVisitDate: string | null; previousVisitScore: number | null;
-  branch: { id: string; branchCode: string; branchName: string };
+  branch: {
+    id: string; branchCode: string; branchName: string;
+    upsCapacityKva: number | null; upsBackupTimeMins: number | null;
+    acTonnage: number | null; electricityLoadKw: number | null;
+    rmsVendorPresent: boolean; rmsVendorName: string | null;
+    fireExtinguisherCount: number; dgOwnership: string | null;
+    dgCapacityKva: number | null;
+  };
   quarter: { id: string; label: string | null; financialYear?: number; quarterNumber?: number };
   sfh?: { userId?: string; user?: { name: string } | null } | null;
   scores: ScoreRow[];
@@ -149,6 +156,7 @@ export function VisitDetailPage() {
   const [utilityForm] = Form.useForm<{ electricity_last_quarter?: number | null; utility_lines?: UtilityLine[] }>();
   const [savingUtility, setSavingUtility] = useState(false);
   const [visitTypeLocal, setVisitTypeLocal] = useState("physical");
+  const [dgOwnershipLocal, setDgOwnershipLocal] = useState<"owned" | "rented" | null>(null);
   const [overviewDirty, setOverviewDirty] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [deleteIssueId, setDeleteIssueId] = useState<string | null>(null);
@@ -180,6 +188,7 @@ export function VisitDetailPage() {
       }
       setScoreDrafts(v.scores.map((s) => ({ ...s })));
       setVisitTypeLocal(v.visitType);
+      setDgOwnershipLocal((v.branch.dgOwnership as "owned" | "rented" | null) ?? null);
       setOverviewDirty(false);
       overviewForm.setFieldsValue({
         visit_type: v.visitType,
@@ -189,7 +198,6 @@ export function VisitDetailPage() {
         virtual_staff_contact_phone: v.virtualStaffContactPhone ?? undefined,
         boi_name_snapshot: v.boiNameSnapshot ?? undefined,
         location_head_snapshot: v.locationHeadSnapshot ?? undefined,
-        branch_ops_incharge_snapshot: v.branchOpsInchargeSnapshot ?? undefined,
         staff_outsource_snapshot: v.staffOutsourceSnapshot ?? undefined,
         staff_company_snapshot: v.staffCompanySnapshot ?? undefined,
         staff_hk_resources_snapshot: v.staffHkResourcesSnapshot ?? undefined,
@@ -197,6 +205,13 @@ export function VisitDetailPage() {
         workstations_linear_snapshot: v.workstationsLinearSnapshot ?? undefined,
         workstations_lshape_snapshot: v.workstationsLshapeSnapshot ?? undefined,
         workstations_cubical_snapshot: v.workstationsCubicalSnapshot ?? undefined,
+        bf_ups_capacity_kva: v.branch.upsCapacityKva ?? undefined,
+        bf_ups_backup_time_mins: v.branch.upsBackupTimeMins ?? undefined,
+        bf_ac_tonnage: v.branch.acTonnage ?? undefined,
+        bf_electricity_load_kw: v.branch.electricityLoadKw ?? undefined,
+        bf_rms_vendor_present: v.branch.rmsVendorPresent,
+        bf_fire_extinguisher_count: v.branch.fireExtinguisherCount,
+        bf_dg_capacity_kva: v.branch.dgCapacityKva ?? undefined,
         is_infra_upgrade: v.isInfraUpgrade, landlord_issue: v.landlordIssue,
         landlord_issue_details: v.landlordIssueDetails ?? undefined,
         incident_previous_visit: v.incidentPreviousVisit,
@@ -248,7 +263,6 @@ export function VisitDetailPage() {
           virtual_staff_contact_phone: v.virtual_staff_contact_phone ?? null,
           boi_name_snapshot: v.boi_name_snapshot ?? null,
           location_head_snapshot: v.location_head_snapshot ?? null,
-          branch_ops_incharge_snapshot: v.branch_ops_incharge_snapshot ?? null,
           staff_outsource_snapshot: v.staff_outsource_snapshot,
           staff_company_snapshot: v.staff_company_snapshot,
           staff_hk_resources_snapshot: v.staff_hk_resources_snapshot,
@@ -263,6 +277,16 @@ export function VisitDetailPage() {
           audit_points_observed: v.audit_points_observed, audit_points_details: v.audit_points_details ?? null,
           major_escalation: v.major_escalation, escalation_details: v.escalation_details ?? null,
           escalation_closure_date: v.escalation_closure_date ?? null,
+          branch_facility: {
+            upsCapacityKva: v.bf_ups_capacity_kva ?? null,
+            upsBackupTimeMins: v.bf_ups_backup_time_mins ?? null,
+            acTonnage: v.bf_ac_tonnage ?? null,
+            electricityLoadKw: v.bf_electricity_load_kw ?? null,
+            rmsVendorPresent: v.bf_rms_vendor_present ?? false,
+            fireExtinguisherCount: v.bf_fire_extinguisher_count ?? 0,
+            dgOwnership: dgOwnershipLocal,
+            dgCapacityKva: v.bf_dg_capacity_kva ?? null,
+          },
         }),
       });
       void message.success("Visit details saved");
@@ -563,9 +587,8 @@ export function VisitDetailPage() {
                       <p style={{ fontSize: 12, color: "#6B7280", fontStyle: "italic", marginTop: 0, marginBottom: 16 }}>Point-in-time capture at time of visit</p>
                       {sectionLabel("People")}
                       <Row gutter={16}>
-                        <Col xs={24} md={8}><Form.Item name="boi_name_snapshot" label="BOI Name"><Input /></Form.Item></Col>
-                        <Col xs={24} md={8}><Form.Item name="location_head_snapshot" label="Location Head"><Input /></Form.Item></Col>
-                        <Col xs={24} md={8}><Form.Item name="branch_ops_incharge_snapshot" label="Branch Ops Incharge"><Input /></Form.Item></Col>
+                        <Col xs={24} md={12}><Form.Item name="boi_name_snapshot" label="BOI Name"><Input /></Form.Item></Col>
+                        <Col xs={24} md={12}><Form.Item name="location_head_snapshot" label="Location Head"><Input /></Form.Item></Col>
                       </Row>
                       {sectionLabel("Staff Strength")}
                       <Row gutter={12}>
@@ -580,6 +603,42 @@ export function VisitDetailPage() {
                         <Col xs={12} sm={8}><Form.Item name="workstations_lshape_snapshot" label="L-Shape"><InputNumber min={0} style={{ width: "100%" }} /></Form.Item></Col>
                         <Col xs={12} sm={8}><Form.Item name="workstations_cubical_snapshot" label="Cubical"><InputNumber min={0} style={{ width: "100%" }} /></Form.Item></Col>
                       </Row>
+                      {sectionLabel("Technical Equipment Details")}
+                      <Row gutter={12}>
+                        <Col xs={12} sm={6}><Form.Item name="bf_ups_capacity_kva" label="UPS KVA"><InputNumber min={0} style={{ width: "100%" }} /></Form.Item></Col>
+                        <Col xs={12} sm={6}><Form.Item name="bf_ups_backup_time_mins" label="UPS Backup (min)"><InputNumber min={0} style={{ width: "100%" }} /></Form.Item></Col>
+                        <Col xs={12} sm={6}><Form.Item name="bf_ac_tonnage" label="AC Tonnage"><InputNumber min={0} style={{ width: "100%" }} /></Form.Item></Col>
+                        <Col xs={12} sm={6}><Form.Item name="bf_electricity_load_kw" label="Electricity Load KW"><InputNumber min={0} style={{ width: "100%" }} /></Form.Item></Col>
+                      </Row>
+                      <Row gutter={12}>
+                        <Col xs={12} sm={8}>
+                          <Form.Item name="bf_rms_vendor_present" label="RMS Vendor Present" valuePropName="checked">
+                            <Switch />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={12} sm={8}><Form.Item name="bf_fire_extinguisher_count" label="Fire Extinguisher Count"><InputNumber min={0} style={{ width: "100%" }} /></Form.Item></Col>
+                        <Col xs={12} sm={8}><Form.Item name="bf_dg_capacity_kva" label="DG Capacity KVA"><InputNumber min={0} style={{ width: "100%" }} /></Form.Item></Col>
+                      </Row>
+                      <Form.Item label="DG Ownership">
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          {(["owned", "rented"] as const).map((v) => {
+                            const active = dgOwnershipLocal === v;
+                            return (
+                              <button key={v} type="button" disabled={!canEdit}
+                                onClick={() => { if (canEdit) { setDgOwnershipLocal(active ? null : v); setOverviewDirty(true); } }}
+                                style={{ height: 34, padding: "0 18px", borderRadius: 8, border: active ? "none" : "1px solid #D1D5DB", cursor: canEdit ? "pointer" : "not-allowed", background: active ? "#1e1b4b" : "#F9FAFB", color: active ? "#fff" : "#6B7280", fontWeight: 500, fontSize: 13, transition: "all 150ms ease", opacity: !canEdit ? 0.6 : 1 }}>
+                                {v === "owned" ? "Owned" : "Rented"}
+                              </button>
+                            );
+                          })}
+                          {dgOwnershipLocal && canEdit && (
+                            <button type="button" onClick={() => { setDgOwnershipLocal(null); setOverviewDirty(true); }}
+                              style={{ height: 34, padding: "0 10px", borderRadius: 8, border: "1px solid #E5E7EB", background: "none", color: "#9CA3AF", fontSize: 12, cursor: "pointer" }}>
+                              Clear
+                            </button>
+                          )}
+                        </div>
+                      </Form.Item>
                       {(visit.previousVisitDate || visit.previousVisitScore != null) && (
                         <>
                           {sectionLabel("Previous Visit")}

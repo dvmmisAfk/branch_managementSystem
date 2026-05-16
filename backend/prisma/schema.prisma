@@ -56,9 +56,8 @@ enum ScoreBand {
 }
 
 enum DgOwnership {
+  owned
   rented
-  company_owned
-  na
 }
 
 enum SfhPasswordResetRequestStatus {
@@ -196,7 +195,7 @@ model Branch {
   rmsVendorPresent         Boolean      @default(false) @map("rms_vendor_present")
   rmsVendorName            String?      @map("rms_vendor_name") @db.VarChar(255)
   fireExtinguisherCount    Int          @default(0) @map("fire_extinguisher_count")
-  dgOwnership              DgOwnership  @default(na) @map("dg_ownership")
+  dgOwnership              DgOwnership? @map("dg_ownership")
   dgCapacityKva            Decimal?     @map("dg_capacity_kva") @db.Decimal(6, 2)
   isActive                 Boolean      @default(true) @map("is_active")
   createdAt                DateTime     @default(now()) @map("created_at")
@@ -293,7 +292,6 @@ model BranchVisit {
   reasonForNoVisit             String?    @map("reason_for_no_visit")
   boiNameSnapshot              String?    @map("boi_name_snapshot") @db.VarChar(255)
   locationHeadSnapshot         String?    @map("location_head_snapshot") @db.VarChar(255)
-  branchOpsInchargeSnapshot    String?    @map("branch_ops_incharge_snapshot") @db.VarChar(255)
   staffOutsourceSnapshot       Int?       @map("staff_outsource_snapshot")
   staffCompanySnapshot         Int?       @map("staff_company_snapshot")
   staffHkResourcesSnapshot     Int?       @map("staff_hk_resources_snapshot")

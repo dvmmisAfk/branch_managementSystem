@@ -18,7 +18,6 @@ export const branchVisitScalarCore = {
   reasonForNoVisit: true,
   boiNameSnapshot: true,
   locationHeadSnapshot: true,
-  branchOpsInchargeSnapshot: true,
   staffOutsourceSnapshot: true,
   staffCompanySnapshot: true,
   staffHkResourcesSnapshot: true,

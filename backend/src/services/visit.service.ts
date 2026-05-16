@@ -98,7 +98,6 @@ export async function createVisitDraft(opts: {
         : null,
       boiNameSnapshot: branch.boiName ?? null,
       locationHeadSnapshot: branch.branchManagerName ?? null,
-      branchOpsInchargeSnapshot: branch.branchOperationIncharge ?? null,
       staffOutsourceSnapshot: branch.staffOutsource,
       staffCompanySnapshot: branch.staffCompanyRoll,
       staffHkResourcesSnapshot: branch.staffHkResources,

@@ -407,7 +407,7 @@ const branchFacilityZ = z
     rmsVendorPresent: z.boolean().optional(),
     rmsVendorName: z.string().nullable().optional(),
     fireExtinguisherCount: z.number().int().optional(),
-    dgOwnership: z.enum(["rented", "company_owned", "na"]).optional(),
+    dgOwnership: z.enum(["owned", "rented"]).nullable().optional(),
     dgCapacityKva: z.number().nullable().optional(),
   })
   .optional();
@@ -421,7 +421,6 @@ const visitPatchSchema = z
     virtual_staff_contact_phone: z.string().nullable().optional(),
     boi_name_snapshot: z.string().nullable().optional(),
     location_head_snapshot: z.string().nullable().optional(),
-    branch_ops_incharge_snapshot: z.string().nullable().optional(),
     staff_outsource_snapshot: z.number().int().optional(),
     staff_company_snapshot: z.number().int().optional(),
     staff_hk_resources_snapshot: z.number().int().optional(),
@@ -505,7 +504,6 @@ router.patch("/:id", requireRoles(UserRole.sfh), async (req, res, next) => {
         virtualStaffContactPhone: body.virtual_staff_contact_phone ?? undefined,
         boiNameSnapshot: body.boi_name_snapshot ?? undefined,
         locationHeadSnapshot: body.location_head_snapshot ?? undefined,
-        branchOpsInchargeSnapshot: body.branch_ops_incharge_snapshot ?? undefined,
         staffOutsourceSnapshot: body.staff_outsource_snapshot,
         staffCompanySnapshot: body.staff_company_snapshot,
         staffHkResourcesSnapshot: body.staff_hk_resources_snapshot,
