@@ -669,7 +669,6 @@ function buildVisitHtml(model: VisitPdfModel): string {
   <p><strong>Reason for no visit (if any):</strong> ${escapeHtml(model.reasonForNoVisit ?? "—")}</p>
   <p><strong>State facilities head:</strong> <span class="sfh-name">${escapeHtml(model.sfh.user.name)}</span></p>
   <p><strong>BOI / Location head:</strong> ${escapeHtml(model.boiNameSnapshot ?? "—")} · ${escapeHtml(model.locationHeadSnapshot ?? "—")}</p>
-  <p><strong>Ops incharge:</strong> ${escapeHtml(model.branchOpsInchargeSnapshot ?? "—")}</p>
   <p><strong>Staff (snapshot):</strong> Outsource ${escapeHtml(String(model.staffOutsourceSnapshot ?? "—"))} · Company/TALIC ${escapeHtml(String(model.staffTalicEmployeesSnapshot ?? "—"))} · HK ${escapeHtml(String(model.staffHkResourcesSnapshot ?? "—"))}</p>
   <p><strong>Workstations:</strong> Linear ${model.workstationsLinearSnapshot ?? "—"}, L-shape ${model.workstationsLshapeSnapshot ?? "—"}, Cubical ${model.workstationsCubicalSnapshot ?? "—"}</p>
   <p><strong>Technical Equipment Details</strong><br/>${branchTechLine()}</p>

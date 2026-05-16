@@ -30,12 +30,11 @@ function parseBranchType(raw: unknown): BranchType | null {
   return null;
 }
 
-function parseDg(raw: unknown): DgOwnership {
+function parseDg(raw: unknown): DgOwnership | null {
   const s = String(raw ?? "").trim().toLowerCase();
-  if (!s) return DgOwnership.na;
   if (s.includes("rent")) return DgOwnership.rented;
-  if (s.includes("company") || s.includes("owned")) return DgOwnership.company_owned;
-  return DgOwnership.na;
+  if (s.includes("company") || s.includes("owned")) return DgOwnership.owned;
+  return null;
 }
 
 function cell(row: Record<string, unknown>, ...keys: string[]): string | undefined {
@@ -116,7 +115,7 @@ const branchBody = z.object({
   rmsVendorPresent: z.boolean().optional(),
   rmsVendorName: z.string().nullable().optional(),
   fireExtinguisherCount: z.number().int().optional(),
-  dgOwnership: z.enum(["rented", "company_owned", "na"]).optional(),
+  dgOwnership: z.enum(["owned", "rented"]).nullable().optional(),
   dgCapacityKva: z.union([z.number(), z.null()]).optional(),
   isActive: z.boolean().optional(),
 });
@@ -152,7 +151,7 @@ function uncheckedFromBody(body: z.infer<typeof branchBody>): Prisma.BranchUnche
     rmsVendorPresent: body.rmsVendorPresent ?? false,
     rmsVendorName: body.rmsVendorName ?? null,
     fireExtinguisherCount: body.fireExtinguisherCount ?? 0,
-    dgOwnership: body.dgOwnership ?? "na",
+    dgOwnership: body.dgOwnership ?? null,
     dgCapacityKva: body.dgCapacityKva ?? null,
     isActive: body.isActive ?? true,
   };
@@ -306,7 +305,7 @@ router.post(
         rmsVendorPresent: !!input.rmsVendorPresent,
         rmsVendorName: input.rmsVendorName ?? undefined,
         fireExtinguisherCount: input.fireExtinguisherCount ?? undefined,
-        dgOwnership: input.dgOwnership ?? "na",
+        dgOwnership: input.dgOwnership ?? null,
         dgCapacityKva: input.dgCapacityKva ?? undefined,
       });
 
@@ -353,7 +352,7 @@ router.post(
               rmsVendorPresent: !!input.rmsVendorPresent,
               rmsVendorName: input.rmsVendorName ?? null,
               fireExtinguisherCount: input.fireExtinguisherCount ?? 0,
-              dgOwnership: input.dgOwnership ?? DgOwnership.na,
+              dgOwnership: input.dgOwnership ?? null,
               dgCapacityKva: input.dgCapacityKva ?? null,
             },
           });
