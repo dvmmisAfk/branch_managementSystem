@@ -64,6 +64,16 @@ export function parseVisitUtilityLinesJson(json: unknown): VisitUtilityLineRow[]
 }
 
 /**
+ * Renders a boolean flag as a green "No" or red "Yes" pill badge.
+ * Green = no issue; Red = issue flagged.
+ */
+function flagBadge(active: boolean): string {
+  return active
+    ? `<span class="badge badge-flag-warn">Yes</span>`
+    : `<span class="badge badge-flag-ok">No</span>`;
+}
+
+/**
  * Renders a status string (yes / no / not_applicable) as a colour-coded pill badge.
  * Falls back to escaped raw text for any other value.
  */
@@ -269,6 +279,47 @@ const PDF_DOCUMENT_CSS = `
   .badge-yes { background: #dcfce7; color: var(--success); }
   .badge-no  { background: #fee2e2; color: var(--danger); }
   .badge-na  { background: #f1f5f9; color: var(--muted); }
+  /* Flag badges: green = no issue, red = issue flagged */
+  .badge-flag-ok   { background: #dcfce7; color: var(--success); }
+  .badge-flag-warn { background: #fee2e2; color: var(--danger); }
+
+  /* ── Prominent SFH name ────────────────────────────────────── */
+  .sfh-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--brand);
+    background: #eef2ff;
+    padding: 1px 8px;
+    border-radius: 4px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ── DG ownership toggle badges ────────────────────────────── */
+  .dg-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 8px;
+    font-weight: 700;
+    margin-left: 4px;
+  }
+  .dg-active   {
+    background: var(--brand); color: #fff;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .dg-inactive { background: transparent; color: var(--muted); border: 0.5pt solid var(--line); }
+
+  /* ── Flags status grid ──────────────────────────────────────── */
+  .flags-tbl { border-collapse: collapse; margin-top: 6px; width: 100%; }
+  .flags-tbl td { padding: 4px 6px; vertical-align: middle; }
+  .flags-tbl tr { border-bottom: 0.5pt solid #f1f5f9; }
+  .flags-tbl .fl {
+    font-size: 9.5px; font-weight: 600; color: var(--muted);
+    white-space: nowrap; padding-right: 8px;
+  }
+  .flags-tbl .fv { font-size: 9.5px; padding-right: 18px; }
+  .flag-detail { font-size: 8.5px; color: var(--muted); margin-left: 6px; }
 
   /* ── Signature row ─────────────────────────────────────────── */
   .sign-row { margin-top: 28px; width: 100%; border-collapse: collapse; }
@@ -288,6 +339,7 @@ function buildPdfHeaderTemplate(title: string, subtitle: string, date: string): 
   const subLine = subtitle
     ? `<div style="font-size:8px;color:rgba(255,255,255,0.82);margin-top:2px;">${subtitle}</div>`
     : "";
+  // PRODUCT_NAME is intentionally omitted from the header — it appears in the footer instead
   return `<div style="
     -webkit-print-color-adjust:exact;print-color-adjust:exact;
     width:100%;padding:6px 25mm 6px;
@@ -296,10 +348,6 @@ function buildPdfHeaderTemplate(title: string, subtitle: string, date: string): 
     font-family:Helvetica,Arial,sans-serif;box-sizing:border-box;
   ">
     <div>
-      <div style="font-size:7px;font-weight:700;text-transform:uppercase;
-        letter-spacing:0.12em;color:rgba(255,255,255,0.65);margin-bottom:2px;">
-        ${escapeHtml(PRODUCT_NAME)}
-      </div>
       <div style="font-size:10px;font-weight:700;color:#fff;line-height:1.3;">${title}</div>
       ${subLine}
     </div>
@@ -307,7 +355,14 @@ function buildPdfHeaderTemplate(title: string, subtitle: string, date: string): 
   </div>`;
 }
 
-function buildPdfFooterTemplate(): string {
+function buildPdfFooterTemplate(title: string, subtitle: string, date: string): string {
+  // Left side: PRODUCT_NAME (uppercase) · doc title · quarter · generated timestamp
+  const leftParts = [
+    escapeHtml(PRODUCT_NAME.toUpperCase()),
+    title,
+    subtitle,
+    date,
+  ].filter((s) => s.trim()).join(" · ");
   return `<div style="
     -webkit-print-color-adjust:exact;print-color-adjust:exact;
     width:100%;padding:5px 25mm;
@@ -315,7 +370,7 @@ function buildPdfFooterTemplate(): string {
     font-family:Helvetica,Arial,sans-serif;font-size:7.5px;color:#94a3b8;
     border-top:0.5px solid #e2e8f0;box-sizing:border-box;
   ">
-    <span>Internal use only · ${escapeHtml(PRODUCT_NAME)} · Do not distribute outside authorised channels</span>
+    <span>${leftParts}</span>
     <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
   </div>`;
 }
@@ -365,12 +420,12 @@ export async function visitHtmlToPdfBuffer(html: string): Promise<Buffer> {
       subtitle: document.documentElement.getAttribute("data-pdf-subtitle") ?? "",
     }));
 
-    const headerTemplate = buildPdfHeaderTemplate(
-      escapeHtml(meta.title),
-      escapeHtml(meta.subtitle),
-      escapeHtml(generatedAtLabel()),
-    );
-    const footerTemplate = buildPdfFooterTemplate();
+    const safeTitle    = escapeHtml(meta.title);
+    const safeSubtitle = escapeHtml(meta.subtitle);
+    const safeDate     = escapeHtml(generatedAtLabel());
+
+    const headerTemplate = buildPdfHeaderTemplate(safeTitle, safeSubtitle, safeDate);
+    const footerTemplate = buildPdfFooterTemplate(safeTitle, safeSubtitle, safeDate);
 
     const pdf = await page.pdf({
       format: "A4",
@@ -540,11 +595,14 @@ function buildVisitHtml(model: VisitPdfModel): string {
   const b = model.branch;
 
   function branchTechLine() {
-    const ups = `${b.upsCapacityKva ?? "–"} / ${b.upsBackupTimeMins ?? "–"} mins`;
-    const dg  = `${b.dgOwnership} — ${b.dgCapacityKva ?? "–"} KVA`;
+    const ups    = `${b.upsCapacityKva ?? "–"} / ${b.upsBackupTimeMins ?? "–"} mins`;
+    const dgOwn  = String(b.dgOwnership ?? "").toLowerCase().trim();
+    const dgKva  = escapeHtml(String(b.dgCapacityKva ?? "–"));
+    const ownedBadge  = `<span class="dg-badge ${dgOwn === "owned"  ? "dg-active" : "dg-inactive"}">Owned</span>`;
+    const rentedBadge = `<span class="dg-badge ${dgOwn === "rented" ? "dg-active" : "dg-inactive"}">Rented</span>`;
     return `
       UPS (KVA) &amp; Backup Time: ${escapeHtml(ups)} · AC Tonnage: ${escapeHtml(String(b.acTonnage ?? "–"))} · Electricity Load: ${escapeHtml(String(b.electricityLoadKw ?? "–"))} KW
-      <div>RMS Vendor: ${escapeHtml(String(b.rmsVendorPresent ? "Yes" : "No"))}${b.rmsVendorName ? ` — ${escapeHtml(b.rmsVendorName)}` : ""} · FE Count: ${escapeHtml(String(b.fireExtinguisherCount ?? 0))} · DG: ${escapeHtml(dg)}</div>`;
+      <div>RMS Vendor: ${escapeHtml(String(b.rmsVendorPresent ? "Yes" : "No"))}${b.rmsVendorName ? ` — ${escapeHtml(b.rmsVendorName)}` : ""} · Fire Extinguisher Count: ${escapeHtml(String(b.fireExtinguisherCount ?? 0))} · DG: ${dgKva} KVA ${ownedBadge}${rentedBadge}</div>`;
   }
 
   const visitUtilityLines = parseVisitUtilityLinesJson(model.utilityLinesJson);
@@ -609,12 +667,28 @@ function buildVisitHtml(model: VisitPdfModel): string {
   <h2 class="sec-title">Visit overview</h2>
   <p class="sec-sub">Visit date <strong>${escapeHtml(model.visitDateActual?.toISOString().slice(0, 10) ?? "—")}</strong> · Previous visit ${escapeHtml(model.previousVisitDate?.toISOString().slice(0, 10) ?? "—")} · Previous score ${escapeHtml(String(model.previousVisitScore ?? "—"))} · <strong>${escapeHtml(model.visitType)}</strong>${model.visitType === "virtual" ? ` · Staff contact: ${escapeHtml(model.virtualStaffContactName ?? "")} / ${escapeHtml(model.virtualStaffContactPhone ?? "")}` : ""}</p>
   <p><strong>Reason for no visit (if any):</strong> ${escapeHtml(model.reasonForNoVisit ?? "—")}</p>
-  <p><strong>State facilities head:</strong> ${escapeHtml(model.sfh.user.name)}</p>
-  <p><strong>BOI / Location head / Ops incharge:</strong> ${escapeHtml(model.boiNameSnapshot ?? "—")} · ${escapeHtml(model.locationHeadSnapshot ?? "—")} · ${escapeHtml(model.branchOpsInchargeSnapshot ?? "—")}</p>
-  <p><strong>Staff (snapshot):</strong> Outsource ${model.staffOutsourceSnapshot ?? "—"}, Company ${escapeHtml(String(model.staffCompanySnapshot ?? "—"))}, HK ${escapeHtml(String(model.staffHkResourcesSnapshot ?? "—"))}, TALIC ${escapeHtml(String(model.staffTalicEmployeesSnapshot ?? "—"))}</p>
+  <p><strong>State facilities head:</strong> <span class="sfh-name">${escapeHtml(model.sfh.user.name)}</span></p>
+  <p><strong>BOI / Location head:</strong> ${escapeHtml(model.boiNameSnapshot ?? "—")} · ${escapeHtml(model.locationHeadSnapshot ?? "—")}</p>
+  <p><strong>Ops incharge:</strong> ${escapeHtml(model.branchOpsInchargeSnapshot ?? "—")}</p>
+  <p><strong>Staff (snapshot):</strong> Outsource ${escapeHtml(String(model.staffOutsourceSnapshot ?? "—"))} · Company/TALIC ${escapeHtml(String(model.staffTalicEmployeesSnapshot ?? "—"))} · HK ${escapeHtml(String(model.staffHkResourcesSnapshot ?? "—"))}</p>
   <p><strong>Workstations:</strong> Linear ${model.workstationsLinearSnapshot ?? "—"}, L-shape ${model.workstationsLshapeSnapshot ?? "—"}, Cubical ${model.workstationsCubicalSnapshot ?? "—"}</p>
-  <p><strong>Technical (branch master)</strong><br/>${branchTechLine()}</p>
-  <p><strong>Flags:</strong> Infra upgrade ${model.isInfraUpgrade ? "Yes" : "No"} · Landlord issue ${model.landlordIssue ? `Yes — ${escapeHtml(model.landlordIssueDetails ?? "")}` : "No"} · Incident since last ${escapeHtml(model.incidentPreviousVisit ? model.incidentPreviousVisitDetails ?? "Yes" : "No")} · Audit points ${escapeHtml(model.auditPointsObserved ? model.auditPointsDetails ?? "Yes" : "No")} · Escalation ${escapeHtml(model.majorEscalation ? `${model.escalationDetails ?? ""} (${model.escalationClosureDate?.toISOString().slice(0, 10) ?? ""})` : "No")}</p>
+  <p><strong>Technical Equipment Details</strong><br/>${branchTechLine()}</p>
+  <table class="flags-tbl">
+    <tr>
+      <td class="fl">Infra upgrade</td>
+      <td class="fv">${flagBadge(!!model.isInfraUpgrade)}</td>
+      <td class="fl">Landlord issue</td>
+      <td class="fv">${flagBadge(!!model.landlordIssue)}${model.landlordIssue && model.landlordIssueDetails ? `<span class="flag-detail">${escapeHtml(model.landlordIssueDetails)}</span>` : ""}</td>
+      <td class="fl">Incident since last</td>
+      <td class="fv">${flagBadge(!!model.incidentPreviousVisit)}${model.incidentPreviousVisit && model.incidentPreviousVisitDetails ? `<span class="flag-detail">${escapeHtml(model.incidentPreviousVisitDetails)}</span>` : ""}</td>
+    </tr>
+    <tr>
+      <td class="fl">Audit points</td>
+      <td class="fv">${flagBadge(!!model.auditPointsObserved)}${model.auditPointsObserved && model.auditPointsDetails ? `<span class="flag-detail">${escapeHtml(model.auditPointsDetails)}</span>` : ""}</td>
+      <td class="fl">Escalation</td>
+      <td class="fv" colspan="3">${flagBadge(!!model.majorEscalation)}${model.majorEscalation ? `<span class="flag-detail">${escapeHtml(model.escalationDetails ?? "")}${model.escalationClosureDate ? ` (closes ${model.escalationClosureDate.toISOString().slice(0, 10)})` : ""}</span>` : ""}</td>
+    </tr>
+  </table>
 </section>
 
 <section class="sec page-start">
