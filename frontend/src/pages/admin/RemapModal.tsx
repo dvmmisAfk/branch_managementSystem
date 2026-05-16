@@ -86,7 +86,7 @@ export function RemapModal({
         setSfhOptions(
           rows
             .filter((s) => s.isActive)
-            .map((s) => ({ label: `${s.name} (${s.email})`, value: s.id }))
+            .map((s) => ({ label: s.name, value: s.id }))
         );
       } catch {
         setSfhOptions([]);

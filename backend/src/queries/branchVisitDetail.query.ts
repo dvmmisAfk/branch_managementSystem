@@ -63,15 +63,41 @@ export function visitDetailSelect(includeUtilityColumns: boolean): Prisma.Branch
       },
     },
     scores: {
-      include: {
+      select: {
+        id: true,
+        visitId: true,
+        subcategoryId: true,
+        status: true,
+        scoreGiven: true,
+        maxScore: true,
+        observations: true,
+        remsNumber: true,
+        remarks: true,
         subcategory: {
-          include: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            displayOrder: true,
             category: { select: { id: true, name: true, displayOrder: true } },
           },
         },
       },
     },
-    issues: { include: { category: true } },
+    issues: {
+      select: {
+        id: true,
+        visitId: true,
+        categoryId: true,
+        issueDescription: true,
+        scheduledClosureDate: true,
+        issueStatus: true,
+        resolutionNotes: true,
+        resolvedAt: true,
+        createdAt: true,
+        category: { select: { id: true, name: true } },
+      },
+    },
     scoreSnapshot: true,
     mapping: true,
   };
@@ -106,6 +132,50 @@ export async function queryVisitDetail(visitId: string) {
 
 export async function queryVisitDetailOrThrow(visitId: string) {
   const v = await queryVisitDetail(visitId);
+  if (!v) throw new Error(`BranchVisit not found: ${visitId}`);
+  return v;
+}
+
+/** Full graph for PDF/Excel export (uses `include` for reliable relation typing). */
+export async function queryVisitDetailForReport(visitId: string) {
+  try {
+    return await prisma.branchVisit.findUnique({
+      where: { id: visitId },
+      include: {
+        branch: true,
+        quarter: true,
+        sfh: { include: { user: { select: { name: true, email: true } } } },
+        scores: {
+          include: {
+            subcategory: { include: { category: { select: { id: true, name: true, displayOrder: true } } } },
+          },
+        },
+        issues: { include: { category: { select: { id: true, name: true } } } },
+        scoreSnapshot: true,
+      },
+    });
+  } catch (e) {
+    if (!isMissingUtilityColumnsError(e)) throw e;
+    return prisma.branchVisit.findUnique({
+      where: { id: visitId },
+      include: {
+        branch: true,
+        quarter: true,
+        sfh: { include: { user: { select: { name: true, email: true } } } },
+        scores: {
+          include: {
+            subcategory: { include: { category: { select: { id: true, name: true, displayOrder: true } } } },
+          },
+        },
+        issues: { include: { category: { select: { id: true, name: true } } } },
+        scoreSnapshot: true,
+      },
+    });
+  }
+}
+
+export async function queryVisitDetailForReportOrThrow(visitId: string) {
+  const v = await queryVisitDetailForReport(visitId);
   if (!v) throw new Error(`BranchVisit not found: ${visitId}`);
   return v;
 }

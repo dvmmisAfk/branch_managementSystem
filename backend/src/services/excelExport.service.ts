@@ -2,6 +2,7 @@ import ExcelJS from "exceljs";
 import type { VisitPdfModel } from "./pdfGeneration.service.js";
 import { fmtInr, parseVisitUtilityLinesJson } from "./pdfGeneration.service.js";
 import { generatedAtLabel, PRODUCT_NAME, XL } from "./excelLayoutBranding.js";
+import { sanitizeExcelCellValue } from "../utils/excelSafe.js";
 
 export type ReportSheetMeta = {
   /** Second line under product name (e.g. "Visited branches report") */
@@ -72,7 +73,7 @@ function writeDataRowsZebra(
     for (let c = 1; c <= colCount; c++) {
       const cell = sheet.getCell(r, c);
       const v = rows[i]![c - 1];
-      cell.value = v === null || v === undefined ? "" : v;
+      cell.value = v === null || v === undefined ? "" : sanitizeExcelCellValue(v);
       cell.font = { size: 10, color: { argb: XL.labelStrong } };
       cell.alignment = { vertical: "top", horizontal: "left", wrapText: true };
       cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: fill } };

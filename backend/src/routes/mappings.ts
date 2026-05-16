@@ -5,10 +5,11 @@ import { prisma } from "../lib/prisma.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { requireRoles } from "../middleware/requireRoles.js";
 import { HttpError } from "../utils/HttpError.js";
+import { requireSfhOrSupervisor } from "../middleware/requireSfhOrSupervisor.js";
 
 const router = Router();
 
-router.use(authenticate);
+router.use(authenticate, requireSfhOrSupervisor);
 
 const CreateMappingSchema = z.object({
   sfhId: z.string().uuid(),

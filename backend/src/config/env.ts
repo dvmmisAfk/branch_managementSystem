@@ -14,6 +14,10 @@ const envSchema = z
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
     /** Comma-separated browser origins allowed for CORS (e.g. https://app.vercel.app). Empty = reflect request origin (dev-friendly; avoid in production). */
     ALLOWED_ORIGINS: z.string().optional(),
+    /** Optional comma-separated host suffixes for CORS (e.g. `.vercel.app` for preview URLs). HTTPS only. */
+    ALLOWED_ORIGIN_SUFFIXES: z.string().optional(),
+    /** Cookie SameSite: `lax` (same-site / Docker nginx) or `none` (cross-site, e.g. Vercel + Render). */
+    COOKIE_SAME_SITE: z.enum(["lax", "none", "strict"]).optional(),
     /** Base URL of the web app (for password-reset / verification links). Server-only. */
     APP_PUBLIC_URL: z.string().url().optional(),
     /** When `true`, reject login if `emailVerifiedAt` is null (except migration path). */
@@ -30,11 +34,13 @@ const envSchema = z
     if (val.NODE_ENV !== "production") return;
     const origins =
       val.ALLOWED_ORIGINS?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
-    if (origins.length === 0) {
+    const suffixes =
+      val.ALLOWED_ORIGIN_SUFFIXES?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
+    if (origins.length === 0 && suffixes.length === 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message:
-          "ALLOWED_ORIGINS is required in production: set a comma-separated list of exact browser origins (e.g. https://app.example.com). Empty origins enable reflective CORS and are unsafe.",
+          "In production set ALLOWED_ORIGINS (exact URLs) and/or ALLOWED_ORIGIN_SUFFIXES (e.g. .vercel.app).",
         path: ["ALLOWED_ORIGINS"],
       });
     }

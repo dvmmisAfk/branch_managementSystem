@@ -19,11 +19,10 @@ export async function recalculateScoreSnapshotForVisit(visitId: string) {
 
   let earnedTotal = 0;
   let maxTotal = 0;
-  const categoryAgg = new Map<string, { earned: number; max: number; name: string }>();
+  const categoryAgg = new Map<string, { earned: number; max: number; name: string; displayOrder: number }>();
 
   for (const row of rows) {
-    const catId = row.subcategory.category.id;
-    const catName = row.subcategory.category.name;
+    const cat = row.subcategory.category;
     const max = row.maxScore;
     if (row.status === "not_applicable") continue;
 
@@ -33,9 +32,9 @@ export async function recalculateScoreSnapshotForVisit(visitId: string) {
     earnedTotal += earned;
     maxTotal += max;
 
-    let cur = categoryAgg.get(catId) ?? { earned: 0, max: 0, name: catName };
+    let cur = categoryAgg.get(cat.id) ?? { earned: 0, max: 0, name: cat.name, displayOrder: cat.displayOrder };
     cur = { ...cur, earned: cur.earned + earned, max: cur.max + max };
-    categoryAgg.set(catId, cur);
+    categoryAgg.set(cat.id, cur);
   }
 
   const categoryBreakdown: Record<string, BreakdownRow> = {};
@@ -43,12 +42,14 @@ export async function recalculateScoreSnapshotForVisit(visitId: string) {
     categoryBreakdown[name] = {
       earned,
       max,
-      pct: max <= 0 ? 0 : Math.round(((earned * 10000) / max)) / 100,
+      pct: max <= 0 ? 0 : Math.round((earned * 10000) / max) / 100,
     };
   }
 
-  const scorePercentage = maxTotal <= 0 ? 0 : Math.round(((earnedTotal * 10000) / maxTotal)) / 100;
-  const scoreBand = bandFromPct(scorePercentage);
+  // C-3 fix: all-NA visits get null percentage + not_applicable band instead of 0% / critical
+  const scorePercentage =
+    maxTotal <= 0 ? null : Math.round((earnedTotal * 10000) / maxTotal) / 100;
+  const scoreBand: ScoreBand = maxTotal <= 0 ? "not_applicable" : bandFromPct(scorePercentage!);
 
   await prisma.scoreSnapshot.upsert({
     where: { visitId },
@@ -56,14 +57,14 @@ export async function recalculateScoreSnapshotForVisit(visitId: string) {
       visitId,
       totalPointsEarned: earnedTotal,
       totalMaxPoints: maxTotal,
-      scorePercentage,
+      scorePercentage: scorePercentage ?? undefined,
       scoreBand,
       categoryBreakdown: categoryBreakdown as object,
     },
     update: {
       totalPointsEarned: earnedTotal,
       totalMaxPoints: maxTotal,
-      scorePercentage,
+      scorePercentage: scorePercentage ?? null,
       scoreBand,
       categoryBreakdown: categoryBreakdown as object,
       calculatedAt: new Date(),

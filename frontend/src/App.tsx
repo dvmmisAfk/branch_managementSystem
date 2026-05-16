@@ -3,6 +3,7 @@ import { Suspense, lazy } from "react";
 import { Spin } from "antd";
 import { LoginPage } from "./pages/LoginPage";
 import { RequestPasswordResetPage } from "./pages/RequestPasswordResetPage";
+import { NotFoundPage } from "./pages/NotFoundPage";
 import { RequireAuth } from "./components/RequireAuth";
 import { RequireSupervisor } from "./components/RequireSupervisor";
 import { AppLayout } from "./components/AppLayout";
@@ -26,6 +27,10 @@ const SfhManagementPage = lazy(async () => {
 const BranchesManagementPage = lazy(async () => {
   const m = await import("./pages/BranchesManagementPage");
   return { default: m.BranchesManagementPage };
+});
+const ScorecardPage = lazy(async () => {
+  const m = await import("./pages/ScorecardPage");
+  return { default: m.ScorecardPage };
 });
 
 function PageFallback() {
@@ -52,11 +57,12 @@ export default function App() {
                 <Route path="/sfhs" element={<SfhManagementPage />} />
                 <Route path="/mappings" element={<Navigate to="/branches" replace />} />
                 <Route path="/branches" element={<BranchesManagementPage />} />
+                <Route path="/scorecard" element={<ScorecardPage />} />
               </Route>
             </Route>
           </Route>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>
     </BrowserRouter>

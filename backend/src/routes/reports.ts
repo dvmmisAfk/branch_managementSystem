@@ -2,6 +2,7 @@ import { Router, type NextFunction, type Request, type Response } from "express"
 import { ApprovalStatus, IssueStatus, UserRole } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { authenticate } from "../middleware/authenticate.js";
+import { requireSfhOrSupervisor } from "../middleware/requireSfhOrSupervisor.js";
 import { HttpError } from "../utils/HttpError.js";
 import { getSfhRecordForUser } from "../services/visit.service.js";
 import {
@@ -13,7 +14,7 @@ import {
 import { escapeHtml, tableTitleToPdf, visitHtmlToPdfBuffer, wrapStandardReportPage } from "../services/pdfGeneration.service.js";
 
 const router = Router();
-router.use(authenticate);
+router.use(authenticate, requireSfhOrSupervisor);
 
 async function mappedBranchIds(sfhScope?: string): Promise<Set<string>> {
   const rows = await prisma.sfhBranchMapping.findMany({
@@ -154,41 +155,43 @@ router.get("/pending-branches", async (req: Request, res: Response, next: NextFu
       select: { branchId: true },
     });
     const visitedSet = new Set(visited.map((v) => v.branchId));
-    const outRows: {
-      branchCode: string;
-      sapCode: string | null;
-      location: string | null;
-      city: string | null;
-      state: string | null;
-      sfhName: string;
-      quarterLabel: string | null;
-      daysRemaining: number;
-    }[] = [];
-    for (const branchId of mapped) {
-      if (visitedSet.has(branchId)) continue;
-      const b = await prisma.branch.findUnique({ where: { id: branchId } });
-      if (!b) continue;
-      const mp = await prisma.sfhBranchMapping.findFirst({
-        where: {
-          branchId,
-          isCurrent: true,
-          approvalStatus: ApprovalStatus.approved,
-          ...(sfhScope ? { sfhId: sfhScope } : {}),
-        },
-        include: { sfh: { include: { user: { select: { name: true } } } } },
-      });
-      outRows.push({
-        branchCode: b.branchCode,
-        sapCode: b.sapCode,
-        location: b.location,
-        city: b.city,
-        state: b.state,
-        sfhName: mp?.sfh.user.name ?? "—",
-        quarterLabel: quarter.label,
-        daysRemaining: daysRemainingInQuarter(quarter.endDate),
-      });
-    }
-    outRows.sort((a, b) => a.branchCode.localeCompare(b.branchCode));
+    const pendingIds = mapped.filter((id) => !visitedSet.has(id));
+    const pendingBranches =
+      pendingIds.length === 0
+        ? []
+        : await prisma.branch.findMany({
+            where: { id: { in: pendingIds }, isActive: true },
+            orderBy: { branchCode: "asc" },
+            select: {
+              id: true,
+              branchCode: true,
+              sapCode: true,
+              location: true,
+              city: true,
+              state: true,
+              mappings: {
+                where: {
+                  isCurrent: true,
+                  approvalStatus: ApprovalStatus.approved,
+                  ...(sfhScope ? { sfhId: sfhScope } : {}),
+                },
+                take: 1,
+                select: {
+                  sfh: { select: { user: { select: { name: true } } } },
+                },
+              },
+            },
+          });
+    const outRows = pendingBranches.map((b) => ({
+      branchCode: b.branchCode,
+      sapCode: b.sapCode,
+      location: b.location,
+      city: b.city,
+      state: b.state,
+      sfhName: b.mappings[0]?.sfh.user.name ?? "—",
+      quarterLabel: quarter.label,
+      daysRemaining: daysRemainingInQuarter(quarter.endDate),
+    }));
     const headers = [
       "Branch Code",
       "SAP Code",

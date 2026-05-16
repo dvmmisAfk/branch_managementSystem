@@ -165,6 +165,12 @@ After `cd backend && npm run db:seed`, check the terminal for lines like `[seed]
 
 ---
 
+## Production deploy (Render + Vercel)
+
+See **[DEPLOY.md](DEPLOY.md)** for GitHub → Render (API + PostgreSQL) + Vercel (frontend), environment variables, CORS/cookies, and smoke checks.
+
+---
+
 ## Security & production deployment
 
 - **Secrets**: Keep `DATABASE_URL`, JWT secrets, and `RESEND_API_KEY` only on the server or in a secrets manager. Use `backend/.env.example` as a template; never commit `.env`. Run `npm run security:scan-secrets --prefix backend` before releases.

@@ -6,6 +6,7 @@ import { requireRoles } from "../middleware/requireRoles.js";
 import { HttpError } from "../utils/HttpError.js";
 import { getSfhRecordForUser } from "../services/visit.service.js";
 import { buildIssuesSummarySheet } from "../services/excelExport.service.js";
+import { parsePagination } from "../utils/pagination.js";
 
 const router = Router();
 router.use(authenticate);
@@ -22,7 +23,10 @@ router.get("/export", requireRoles(UserRole.sfh), async (req, res, next) => {
     const statusFilter =
       statusRaw && allowed.includes(statusRaw as IssueStatus) ? (statusRaw as IssueStatus) : undefined;
 
+    const { take, skip } = parsePagination(req, 500);
     const issues = await prisma.visitIssue.findMany({
+      take,
+      skip,
       where: {
         ...(statusFilter ? { issueStatus: statusFilter } : { issueStatus: { in: [IssueStatus.open, IssueStatus.in_progress] } }),
         visit: { sfhId: sfh.id },

@@ -166,10 +166,10 @@ export function DashboardPage() {
   const daysRemaining = cq ? Math.ceil((new Date(cq.end).getTime() - Date.now()) / 86_400_000) : null;
   const showPendingAlert = isSfh && daysRemaining !== null && daysRemaining <= 30 && daysRemaining >= 0 && pendingCount > 0;
 
-  const quarterChartData = ["Q1", "Q2", "Q3"].map((q) => ({
-    name: q,
-    Visited: qb?.[q]?.visited ?? 0,
-    Pending: qb?.[q]?.pending ?? 0,
+  const quarterChartData = Object.entries(qb ?? {}).map(([name, v]) => ({
+    name,
+    Visited: v?.visited ?? 0,
+    Pending: v?.pending ?? 0,
   }));
 
   const sfhCompletionData = (dash?.sfh_stats ?? [])

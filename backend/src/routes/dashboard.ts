@@ -75,9 +75,10 @@ async function buildSfhStatRow(sfId: string, cqId: string) {
     where: { visit: { quarterId: cqId, sfhId: sfId, isSubmitted: true, branch: { isActive: true } } },
     select: { scorePercentage: true },
   });
-  if (snaps.length) {
-    const sum = snaps.reduce((acc, s) => acc + Number(s.scorePercentage), 0);
-    avgScore = Math.round((sum / snaps.length) * 100) / 100;
+  const scored = snaps.filter((s) => s.scorePercentage != null);
+  if (scored.length) {
+    const sum = scored.reduce((acc, s) => acc + Number(s.scorePercentage), 0);
+    avgScore = Math.round((sum / scored.length) * 100) / 100;
   }
   return {
     sfh_id: sfId,
@@ -98,18 +99,13 @@ async function fyQuarterBreakdown(sfhScope: string | undefined, fy: number) {
     orderBy: { quarterNumber: "asc" },
   });
   const mappedSize = (await mappedBranchIds(sfhScope)).size;
-  const keys = {
-    Q1: { visited: 0, pending: 0 },
-    Q2: { visited: 0, pending: 0 },
-    Q3: { visited: 0, pending: 0 },
-  } as Record<"Q1" | "Q2" | "Q3", { visited: number; pending: number }>;
+  const breakdown: Record<string, { visited: number; pending: number }> = {};
   for (const q of quarters) {
-    const label = `Q${q.quarterNumber}` as "Q1" | "Q2" | "Q3";
-    if (label !== "Q1" && label !== "Q2" && label !== "Q3") continue;
+    const key = q.label ?? `Q${q.quarterNumber}`;
     const vis = await submittedBranchCountForQuarter(q.id, sfhScope);
-    keys[label] = { visited: vis, pending: Math.max(mappedSize - vis, 0) };
+    breakdown[key] = { visited: vis, pending: Math.max(mappedSize - vis, 0) };
   }
-  return keys;
+  return breakdown;
 }
 
 router.get("/sfh", requireRoles(UserRole.sfh), async (req, res, next) => {

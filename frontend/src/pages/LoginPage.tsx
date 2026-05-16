@@ -1,25 +1,32 @@
 import { App, Button, Form, Input, Spin } from "antd";
 import { Building2, Eye, EyeOff } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { ApiError, loadStoredTokens, loginWithCredentials } from "../api/client";
+import { ApiError, bootstrapSession, loadStoredTokens, loginWithCredentials } from "../api/client";
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const redirectTo =
+    (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? "/dashboard";
   const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
 
   useEffect(() => {
-    if (loadStoredTokens()) navigate("/dashboard", { replace: true });
-  }, [navigate]);
+    void (async () => {
+      if (loadStoredTokens() || (await bootstrapSession())) {
+        navigate(redirectTo, { replace: true });
+      }
+    })();
+  }, [navigate, redirectTo]);
 
   async function onFinish(values: { loginId: string; password: string }) {
     setLoading(true);
     try {
       const user = await loginWithCredentials(values.loginId.trim(), values.password);
       message.success(`Welcome, ${user.name}`);
-      navigate("/dashboard", { replace: true });
+      navigate(redirectTo, { replace: true });
     } catch (e) {
       if (e instanceof ApiError) {
         message.error(e.message);
@@ -95,33 +102,31 @@ export function LoginPage() {
             rules={[{ required: true, message: "Enter your password" }]}
             style={{ marginBottom: 20 }}
           >
-            <div style={{ position: "relative" }}>
-              <Input
-                type={showPass ? "text" : "password"}
-                placeholder="Password"
-                autoComplete="current-password"
-                style={{ height: 40, paddingRight: 40 }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPass((p: boolean) => !p)}
-                style={{
-                  position: "absolute",
-                  right: 10,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "#9CA3AF",
-                  display: "flex",
-                  alignItems: "center",
-                  padding: 0,
-                }}
-              >
-                {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
+            <Input
+              type={showPass ? "text" : "password"}
+              placeholder="Password"
+              autoComplete="current-password"
+              style={{ height: 40 }}
+              suffix={
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  aria-label={showPass ? "Hide password" : "Show password"}
+                  onClick={() => setShowPass((p: boolean) => !p)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "#9CA3AF",
+                    display: "flex",
+                    alignItems: "center",
+                    padding: 0,
+                  }}
+                >
+                  {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              }
+            />
           </Form.Item>
 
           <Button

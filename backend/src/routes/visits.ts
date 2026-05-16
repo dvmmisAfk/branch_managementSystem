@@ -15,6 +15,8 @@ import {
   getSfhRecordForUser,
 } from "../services/visit.service.js";
 import { recalculateScoreSnapshotForVisit } from "../services/scoreCalculation.service.js";
+import { requireSfhOrSupervisor } from "../middleware/requireSfhOrSupervisor.js";
+import { parsePagination } from "../utils/pagination.js";
 import { buildVisitPdfFromModel } from "../services/pdfGeneration.service.js";
 import { buildVisitExcelBuffer, buildIssuesSummarySheet } from "../services/excelExport.service.js";
 import { loadVisitPdfModel } from "../services/visitReportLoader.service.js";
@@ -23,8 +25,9 @@ import { branchVisitScalarCore, queryVisitDetail } from "../queries/branchVisitD
 const router = Router();
 router.use(authenticate);
 
-router.get("/", async (req, res, next) => {
+router.get("/", requireSfhOrSupervisor, async (req, res, next) => {
   try {
+    const { take, skip } = parsePagination(req);
     const quarterId =
       typeof req.query.quarter_id === "string" && req.query.quarter_id.trim() ?
         req.query.quarter_id
@@ -38,24 +41,30 @@ router.get("/", async (req, res, next) => {
         : undefined
       : undefined;
 
-    let where: Record<string, unknown> = {};
+    const where: Prisma.BranchVisitWhereInput = {};
 
     if (req.user!.role === UserRole.sfh) {
       const sfh = await getSfhRecordForUser(req.user!.id, req.user!.role);
       if (!sfh) return res.json([]);
-      where = { sfhId: sfh.id };
-    } else if (req.user!.role !== UserRole.supervisor) throw new HttpError("Forbidden", 403);
-
-    if (sfhFilter && req.user!.role === UserRole.supervisor) {
-      where = { ...(where as object), sfhId: sfhFilter };
+      where.sfhId = sfh.id;
     }
 
-    if (quarterId) where = { ...where, quarterId };
+    if (sfhFilter && req.user!.role === UserRole.supervisor) {
+      where.sfhId = sfhFilter;
+    }
+
+    if (quarterId) where.quarterId = quarterId;
+    if (status !== undefined) where.isSubmitted = status;
 
     const scoreBandRaw = typeof req.query.score_band === "string" ? req.query.score_band : undefined;
+    if (scoreBandRaw) {
+      where.scoreSnapshot = { scoreBand: scoreBandRaw as never };
+    }
 
-    let visits = await prisma.branchVisit.findMany({
-      where: where as never,
+    const visits = await prisma.branchVisit.findMany({
+      where,
+      take,
+      skip,
       select: {
         id: true,
         branchId: true,
@@ -79,9 +88,6 @@ router.get("/", async (req, res, next) => {
       },
       orderBy: { createdAt: "desc" },
     });
-
-    if (status !== undefined) visits = visits.filter((v) => v.isSubmitted === status);
-    if (scoreBandRaw) visits = visits.filter((v) => v.scoreSnapshot?.scoreBand === scoreBandRaw);
 
     res.json(visits);
   } catch (e) {
@@ -338,7 +344,9 @@ router.post("/:id/submit", requireRoles(UserRole.sfh), async (req, res, next) =>
           scoreErrors.push({ subcategoryId: s.subcategoryId, reason: `Score exceeds max (${s.maxScore})` });
       }
     }
-    if (scoreErrors.length > 0) throw new HttpError(JSON.stringify({ error: "Incomplete scores", details: scoreErrors }), 422);
+    if (scoreErrors.length > 0) {
+      throw new HttpError("Incomplete scores", 422, { details: scoreErrors }, "VISIT_INCOMPLETE_SCORES");
+    }
 
     await prisma.branchVisit.update({
       where: { id: visit.id },
@@ -370,11 +378,8 @@ router.post("/:id/unlock-date", requireRoles(UserRole.supervisor), async (req, r
   try {
     const id = z.string().uuid().parse(req.params.id);
     const body = unlockBody.parse(req.body || {});
-    const visit = await prisma.branchVisit.findUnique({
-      where: { id },
-      select: { id: true, visitDateActual: true },
-    });
-    if (!visit) throw new HttpError("Not found", 404);
+    const visitRow = await assertVisitReadable(id, req.user!);
+    const visit = { id: visitRow.id, visitDateActual: visitRow.visitDateActual };
     const prev = visit.visitDateActual;
     const hasCorrectedDate = !!body.visit_date_actual?.trim()?.length;
     await prisma.branchVisit.update({

@@ -28,7 +28,14 @@ export function securityLog(
     ts: new Date().toISOString(),
     type,
     ...rest,
-    ...(req ? { ip: clientIp(req), path: req.path, method: req.method } : {}),
+    ...(req ?
+      {
+        ip: clientIp(req),
+        path: req.path,
+        method: req.method,
+        ...(req.requestId ? { requestId: req.requestId } : {}),
+      }
+    : {}),
   };
   console.log(JSON.stringify(base));
 }

@@ -16,7 +16,7 @@ const createUserSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
   password: z.string().min(8),
-  role: z.nativeEnum(UserRole),
+  role: z.literal(UserRole.branch_staff),
 });
 
 router.get("/", async (_req, res, next) => {
@@ -42,9 +42,6 @@ router.get("/", async (_req, res, next) => {
 router.post("/", accountCreateLimiter, async (req, res, next) => {
   try {
     const body = createUserSchema.parse(req.body);
-    if (body.role === UserRole.sfh) {
-      throw new HttpError("Create SFH accounts from SFH Management (POST /sfhs) with employee ID and password.", 400);
-    }
     const passwordHash = await bcrypt.hash(body.password, 12);
     const user = await prisma.user.create({
       data: {

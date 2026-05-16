@@ -53,6 +53,7 @@ enum ScoreBand {
   satisfactory
   needs_improvement
   critical
+  not_applicable
 }
 
 enum DgOwnership {
@@ -85,8 +86,26 @@ model User {
   sfhPasswordResetRequests       SfhPasswordResetRequest[] @relation("SfhPwdResetUser")
   fulfilledSfhPasswordResets      SfhPasswordResetRequest[] @relation("SfhPwdResetFulfilledBy")
   reviewedEditRequests           VisitEditRequest[]         @relation("EditRequestReviewer")
+  scorecardAuditLogs             ScorecardAuditLog[]
+  refreshSessions                RefreshSession[]
 
   @@map("users")
+}
+
+model RefreshSession {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  tokenHash    String    @unique @map("token_hash") @db.VarChar(64)
+  familyId     String    @map("family_id") @db.Uuid
+  expiresAt    DateTime  @map("expires_at")
+  revokedAt    DateTime? @map("revoked_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+  @@map("refresh_sessions")
 }
 
 model SfhPasswordResetRequest {
@@ -286,7 +305,7 @@ model BranchVisit {
   visitDateLockedAt            DateTime?  @map("visit_date_locked_at")
   previousVisitDate            DateTime?  @map("previous_visit_date") @db.Date
   previousVisitScore           Decimal?   @map("previous_visit_score") @db.Decimal(5, 2)
-  visitType                    VisitType  @map("visit_type")
+  visitType                    VisitType  @default(physical) @map("visit_type")
   virtualStaffContactName      String?    @map("virtual_staff_contact_name") @db.VarChar(255)
   virtualStaffContactPhone     String?    @map("virtual_staff_contact_phone") @db.VarChar(20)
   reasonForNoVisit             String?    @map("reason_for_no_visit")
@@ -350,6 +369,7 @@ model VisitScore {
   subcategory AssessmentSubcategory @relation(fields: [subcategoryId], references: [id], onDelete: Restrict)
 
   @@unique([visitId, subcategoryId])
+  @@index([subcategoryId])
   @@map("visit_scores")
 }
 
@@ -371,14 +391,14 @@ model VisitIssue {
 }
 
 model ScoreSnapshot {
-  id                String    @id @default(uuid()) @db.Uuid
-  visitId           String    @unique @map("visit_id") @db.Uuid
-  totalPointsEarned Int       @map("total_points_earned")
-  totalMaxPoints    Int       @map("total_max_points")
-  scorePercentage   Decimal   @map("score_percentage") @db.Decimal(5, 2)
-  scoreBand         ScoreBand @map("score_band")
-  categoryBreakdown Json      @map("category_breakdown")
-  calculatedAt      DateTime  @default(now()) @map("calculated_at")
+  id                String     @id @default(uuid()) @db.Uuid
+  visitId           String     @unique @map("visit_id") @db.Uuid
+  totalPointsEarned Int        @map("total_points_earned")
+  totalMaxPoints    Int        @map("total_max_points")
+  scorePercentage   Decimal?   @map("score_percentage") @db.Decimal(5, 2)
+  scoreBand         ScoreBand  @map("score_band")
+  categoryBreakdown Json       @map("category_breakdown")
+  calculatedAt      DateTime   @default(now()) @map("calculated_at")
 
   visit BranchVisit @relation(fields: [visitId], references: [id], onDelete: Cascade)
 
@@ -419,4 +439,21 @@ model VisitEditRequest {
   @@index([visitId])
   @@index([status])
   @@map("visit_edit_requests")
+}
+
+model ScorecardAuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  action      String
+  entityType  String   @map("entity_type")
+  entityId    String   @map("entity_id") @db.Uuid
+  changedById String   @map("changed_by") @db.Uuid
+  beforeValue Json?    @map("before_value")
+  afterValue  Json?    @map("after_value")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  changedBy User @relation(fields: [changedById], references: [id], onDelete: Cascade)
+
+  @@index([entityType, entityId])
+  @@index([changedById])
+  @@map("scorecard_audit_log")
 }

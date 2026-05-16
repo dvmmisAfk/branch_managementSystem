@@ -10,8 +10,20 @@ import { HttpError } from "../utils/HttpError.js";
 import { securityLog } from "../lib/securityLog.js";
 import { loginLimiter, refreshLimiter, sfhPasswordResetRequestLimiter } from "../middleware/rateLimits.js";
 import { normalizeSfhEmployeeCode } from "../lib/employeeAuth.js";
+import { clearAuthCookies, readRefreshTokenCookie, setAuthCookies } from "../lib/authCookies.js";
+import {
+  createRefreshSession,
+  revokeAllUserRefreshSessions,
+  revokeRefreshSession,
+  rotateRefreshSession,
+} from "../services/refreshSession.service.js";
 
 const router = Router();
+
+function authJsonTokens(accessToken: string, refreshToken: string) {
+  if (env.NODE_ENV === "production") return { accessToken };
+  return { accessToken, refreshToken };
+}
 
 const loginSchema = z.object({
   loginId: z.string().min(1),
@@ -19,24 +31,29 @@ const loginSchema = z.object({
 });
 
 const accessOpts = { expiresIn: env.JWT_EXPIRY } as SignOptions;
-const refreshOpts = { expiresIn: env.JWT_REFRESH_EXPIRY } as SignOptions;
 
 function signAccessToken(user: { id: string; email: string; name: string; role: string }) {
   return jwt.sign({ sub: user.id, email: user.email, name: user.name, role: user.role }, env.JWT_SECRET, accessOpts);
 }
 
-function signRefreshToken(user: { id: string; email: string; name: string; role: string }) {
-  return jwt.sign(
-    { sub: user.id, email: user.email, name: user.name, role: user.role, typ: "refresh" },
-    env.JWT_REFRESH_SECRET,
-    refreshOpts,
-  );
-}
-
 function mustBeVerifiedForLogin(user: { emailVerifiedAt: Date | null }): void {
   if (env.REQUIRE_EMAIL_VERIFICATION === "true" && !user.emailVerifiedAt) {
-    throw new HttpError("Verify your email before signing in.", 403);
+    throw new HttpError("Verify your email before signing in.", 403, undefined, "AUTH_EMAIL_NOT_VERIFIED");
   }
+}
+
+function userJson(
+  user: { id: string; email: string; name: string; role: UserRole; emailVerifiedAt: Date | null },
+  employeeId?: string,
+) {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    emailVerified: !!user.emailVerifiedAt,
+    ...(employeeId !== undefined ? { employeeId } : {}),
+  };
 }
 
 router.post("/login", loginLimiter, async (req, res, next) => {
@@ -59,7 +76,7 @@ router.post("/login", loginLimiter, async (req, res, next) => {
       const row = await prisma.user.findUnique({ where: { email } });
       if (!row?.isActive || row.role !== UserRole.supervisor) {
         securityLog("auth_login_failure", { req, reason: "invalid_credentials" });
-        throw new HttpError("Invalid credentials", 401);
+        throw new HttpError("Invalid credentials", 401, undefined, "AUTH_INVALID_CREDENTIALS");
       }
       user = row;
     } else {
@@ -83,7 +100,7 @@ router.post("/login", loginLimiter, async (req, res, next) => {
       });
       if (!sfh?.user?.isActive || sfh.user.role !== UserRole.sfh) {
         securityLog("auth_login_failure", { req, reason: "invalid_credentials" });
-        throw new HttpError("Invalid credentials", 401);
+        throw new HttpError("Invalid credentials", 401, undefined, "AUTH_INVALID_CREDENTIALS");
       }
       user = sfh.user;
       employeeId = sfh.employeeCode ?? code;
@@ -92,70 +109,75 @@ router.post("/login", loginLimiter, async (req, res, next) => {
     const ok = await bcrypt.compare(body.password, user.passwordHash);
     if (!ok) {
       securityLog("auth_login_failure", { req, reason: "invalid_credentials" });
-      throw new HttpError("Invalid credentials", 401);
+      throw new HttpError("Invalid credentials", 401, undefined, "AUTH_INVALID_CREDENTIALS");
     }
     mustBeVerifiedForLogin(user);
 
+    await revokeAllUserRefreshSessions(user.id);
     const payload = { id: user.id, email: user.email, name: user.name, role: user.role };
+    const accessToken = signAccessToken(payload);
+    const { token: refreshToken } = await createRefreshSession(user.id);
+    setAuthCookies(res, accessToken, refreshToken);
+
     securityLog("auth_login_success", { req, userId: user.id, role: user.role });
     res.json({
-      accessToken: signAccessToken(payload),
-      refreshToken: signRefreshToken(payload),
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        emailVerified: !!user.emailVerifiedAt,
-        ...(employeeId !== undefined ? { employeeId } : {}),
-      },
+      ...authJsonTokens(accessToken, refreshToken),
+      user: userJson(user, employeeId),
     });
   } catch (e) {
     next(e);
   }
 });
 
-const refreshSchema = z.object({
-  refreshToken: z.string().min(1),
-});
+const refreshSchema = z
+  .object({
+    refreshToken: z.string().min(1).optional(),
+  })
+  .optional();
 
 router.post("/refresh", refreshLimiter, async (req, res, next) => {
   try {
-    const body = refreshSchema.parse(req.body);
-    const decoded = jwt.verify(body.refreshToken, env.JWT_REFRESH_SECRET) as {
-      sub: string;
-      email: string;
-      name: string;
-      role: string;
-      typ?: string;
-    };
-    if (decoded.typ !== "refresh") throw new HttpError("Invalid refresh token", 401);
-    const user = await prisma.user.findUnique({ where: { id: decoded.sub } });
-    if (!user?.isActive) throw new HttpError("Unauthorized", 401);
+    const body = refreshSchema.parse(req.body ?? {}) ?? {};
+    const raw =
+      body.refreshToken ??
+      readRefreshTokenCookie(req.cookies as Record<string, string | undefined>);
+    if (!raw) throw new HttpError("Invalid refresh token", 401, undefined, "AUTH_INVALID_REFRESH");
+
+    const { userId, token: newRefresh } = await rotateRefreshSession(raw);
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user?.isActive) throw new HttpError("Unauthorized", 401, undefined, "AUTH_INVALID_REFRESH");
     mustBeVerifiedForLogin(user);
+
     const payload = { id: user.id, email: user.email, name: user.name, role: user.role };
+    const accessToken = signAccessToken(payload);
+    setAuthCookies(res, accessToken, newRefresh);
+
     securityLog("auth_refresh", { req, userId: user.id });
-    res.json({
-      accessToken: signAccessToken(payload),
-      refreshToken: signRefreshToken(payload),
-    });
+    res.json(authJsonTokens(accessToken, newRefresh));
   } catch (e) {
     if (e instanceof jwt.JsonWebTokenError) {
-      return next(new HttpError("Invalid refresh token", 401));
+      return next(new HttpError("Invalid refresh token", 401, undefined, "AUTH_INVALID_REFRESH"));
     }
     next(e);
   }
 });
 
-router.post("/logout", (req, res) => {
-  securityLog("auth_logout", { req });
-  res.status(204).send();
+router.post("/logout", async (req, res, next) => {
+  try {
+    const raw = readRefreshTokenCookie(req.cookies as Record<string, string | undefined>);
+    if (raw) await revokeRefreshSession(raw);
+    clearAuthCookies(res);
+    securityLog("auth_logout", { req });
+    res.status(204).send();
+  } catch (e) {
+    next(e);
+  }
 });
 
 router.get("/me", authenticate, async (req, res, next) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
-    if (!user?.isActive) throw new HttpError("Unauthorized", 401);
+    if (!user?.isActive) throw new HttpError("Unauthorized", 401, undefined, "AUTH_REQUIRED");
     let employeeId: string | undefined;
     if (user.role === UserRole.sfh) {
       const sfh = await prisma.stateFacilityHead.findUnique({
@@ -164,14 +186,7 @@ router.get("/me", authenticate, async (req, res, next) => {
       });
       employeeId = sfh?.employeeCode ?? undefined;
     }
-    res.json({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      emailVerified: !!user.emailVerifiedAt,
-      ...(employeeId !== undefined ? { employeeId } : {}),
-    });
+    res.json(userJson(user, employeeId));
   } catch (e) {
     next(e);
   }

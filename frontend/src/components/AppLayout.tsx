@@ -4,12 +4,13 @@ import {
   ClipboardList,
   Users,
   Building2,
+  ClipboardCheck,
   LogOut,
   Menu as MenuIcon,
 } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { ApiError, apiFetch, clearTokens } from "../api/client";
+import { ApiError, apiFetch, clearTokens, logoutSession } from "../api/client";
 
 const { useBreakpoint } = Grid;
 const { Header, Content } = Layout;
@@ -53,8 +54,10 @@ export function AppLayout() {
   }, [navigate]);
 
   function logout() {
-    clearTokens();
-    navigate("/login", { replace: true });
+    void logoutSession().finally(() => {
+      clearTokens();
+      navigate("/login", { replace: true });
+    });
   }
 
   const path = location.pathname;
@@ -62,6 +65,7 @@ export function AppLayout() {
     path.startsWith("/visits") ? ["/visits"]
     : path.startsWith("/sfhs") ? ["/sfhs"]
     : path.startsWith("/branches") ? ["/branches"]
+    : path.startsWith("/scorecard") ? ["/scorecard"]
     : ["/dashboard"];
 
   const baseItems = [
@@ -74,6 +78,7 @@ export function AppLayout() {
       ? [
           { key: "/sfhs", icon: <Users size={16} />, label: "SFH Management" },
           { key: "/branches", icon: <Building2 size={16} />, label: "Branches" },
+          { key: "/scorecard", icon: <ClipboardCheck size={16} />, label: "Scorecard" },
         ]
       : [];
 

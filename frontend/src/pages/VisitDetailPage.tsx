@@ -80,13 +80,16 @@ function ScoreSummaryBar({ scores, snap }: { scores: ScoreRow[]; snap: VisitFull
   const filled = scores.filter((s) => s.status !== "not_applicable").length;
   const total = scores.length;
   const band = snap?.scoreBand ?? null;
+  const isAllNA = band === "not_applicable";
   return (
     <div style={{ position: "sticky", top: 56, zIndex: 10, background: "#fff", borderBottom: "1px solid #E5E7EB", boxShadow: "0 -2px 8px rgba(0,0,0,0.08)", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         <span style={{ fontSize: 12, fontWeight: 500, color: "#6B7280" }}>Overall Score</span>
         {snap ? (
           <>
-            <span style={{ fontSize: 24, fontWeight: 700, color: bandColor(band) }}>{fmtPct(snap.scorePercentage as number)}</span>
+            <span style={{ fontSize: 24, fontWeight: 700, color: isAllNA ? "#9CA3AF" : bandColor(band) }}>
+              {isAllNA ? "—" : fmtPct(snap.scorePercentage as number | null)}
+            </span>
             <ScoreBandBadge band={band} />
           </>
         ) : (
@@ -94,7 +97,7 @@ function ScoreSummaryBar({ scores, snap }: { scores: ScoreRow[]; snap: VisitFull
         )}
       </div>
       <div style={{ textAlign: "right", minWidth: 0, flex: "1 1 140px" }}>
-        {snap && <div style={{ fontSize: 13, color: "#6B7280" }}>{snap.totalPointsEarned} / {snap.totalMaxPoints} pts</div>}
+        {snap && !isAllNA && <div style={{ fontSize: 13, color: "#6B7280" }}>{snap.totalPointsEarned} / {snap.totalMaxPoints} pts</div>}
         <div style={{ fontSize: 12, color: "#6B7280" }}>{filled} of {total} rows filled</div>
       </div>
     </div>
@@ -210,6 +213,7 @@ export function VisitDetailPage() {
         bf_ac_tonnage: v.branch.acTonnage ?? undefined,
         bf_electricity_load_kw: v.branch.electricityLoadKw ?? undefined,
         bf_rms_vendor_present: v.branch.rmsVendorPresent,
+        bf_rms_vendor_name: v.branch.rmsVendorName ?? undefined,
         bf_fire_extinguisher_count: v.branch.fireExtinguisherCount,
         bf_dg_capacity_kva: v.branch.dgCapacityKva ?? undefined,
         is_infra_upgrade: v.isInfraUpgrade, landlord_issue: v.landlordIssue,
@@ -283,6 +287,7 @@ export function VisitDetailPage() {
             acTonnage: v.bf_ac_tonnage ?? null,
             electricityLoadKw: v.bf_electricity_load_kw ?? null,
             rmsVendorPresent: v.bf_rms_vendor_present ?? false,
+            rmsVendorName: v.bf_rms_vendor_name?.trim() || null,
             fireExtinguisherCount: v.bf_fire_extinguisher_count ?? 0,
             dgOwnership: dgOwnershipLocal,
             dgCapacityKva: v.bf_dg_capacity_kva ?? null,
@@ -486,7 +491,9 @@ export function VisitDetailPage() {
           {snap && (
             <div style={{ textAlign: "center" }}>
               <div style={{ width: 52, height: 52, borderRadius: "50%", border: `3px solid ${bandColor(snap.scoreBand)}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ fontSize: 15, fontWeight: 700, color: bandColor(snap.scoreBand) }}>{fmtPct(snap.scorePercentage as number)}</span>
+                <span style={{ fontSize: snap.scoreBand === "not_applicable" ? 11 : 15, fontWeight: 700, color: bandColor(snap.scoreBand) }}>
+                  {snap.scoreBand === "not_applicable" ? "N/A" : fmtPct(snap.scorePercentage as number | null)}
+                </span>
               </div>
               <div style={{ marginTop: 4 }}><ScoreBandBadge band={snap.scoreBand} /></div>
             </div>
@@ -616,6 +623,17 @@ export function VisitDetailPage() {
                             <Switch />
                           </Form.Item>
                         </Col>
+                        <Col xs={24} sm={16}>
+                          <Form.Item noStyle shouldUpdate={(p, c) => p.bf_rms_vendor_present !== c.bf_rms_vendor_present}>
+                            {({ getFieldValue }) =>
+                              getFieldValue("bf_rms_vendor_present") ? (
+                                <Form.Item name="bf_rms_vendor_name" label="RMS Vendor Name">
+                                  <Input placeholder="Vendor name" />
+                                </Form.Item>
+                              ) : null
+                            }
+                          </Form.Item>
+                        </Col>
                         <Col xs={12} sm={8}><Form.Item name="bf_fire_extinguisher_count" label="Fire Extinguisher Count"><InputNumber min={0} style={{ width: "100%" }} /></Form.Item></Col>
                         <Col xs={12} sm={8}><Form.Item name="bf_dg_capacity_kva" label="DG Capacity KVA"><InputNumber min={0} style={{ width: "100%" }} /></Form.Item></Col>
                       </Row>
@@ -716,10 +734,14 @@ export function VisitDetailPage() {
                       <>
                         <div style={{ textAlign: "center", marginBottom: 12 }}>
                           <div style={{ width: 72, height: 72, borderRadius: "50%", border: `4px solid ${bandColor(snap.scoreBand)}`, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-                            <span style={{ fontSize: 18, fontWeight: 700, color: bandColor(snap.scoreBand) }}>{fmtPct(snap.scorePercentage as number)}</span>
+                            <span style={{ fontSize: snap.scoreBand === "not_applicable" ? 13 : 18, fontWeight: 700, color: bandColor(snap.scoreBand) }}>
+                              {snap.scoreBand === "not_applicable" ? "N/A" : fmtPct(snap.scorePercentage as number | null)}
+                            </span>
                           </div>
                           <div style={{ marginTop: 6 }}><ScoreBandBadge band={snap.scoreBand} /></div>
-                          <div style={{ fontSize: 12, color: "#6B7280", marginTop: 4 }}>{snap.totalPointsEarned} / {snap.totalMaxPoints} pts</div>
+                          {snap.scoreBand !== "not_applicable" && (
+                            <div style={{ fontSize: 12, color: "#6B7280", marginTop: 4 }}>{snap.totalPointsEarned} / {snap.totalMaxPoints} pts</div>
+                          )}
                         </div>
                         <div style={{ borderTop: "1px solid #E5E7EB", paddingTop: 12 }}>
                           {groupedScores.map(([cat, rows]) => {

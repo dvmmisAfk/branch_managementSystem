@@ -19,6 +19,7 @@ ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 COPY package*.json ./
 RUN npm ci --omit=dev
 COPY prisma ./prisma
+COPY scripts ./scripts
 COPY scripts/docker-entrypoint.sh /docker-entrypoint.sh
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma

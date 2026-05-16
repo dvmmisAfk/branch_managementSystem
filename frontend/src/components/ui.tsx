@@ -3,7 +3,7 @@ import dayjs from "dayjs";
 
 /* ─── Score Band Badge ─────────────────────────────────────────────────── */
 
-type ScoreBandType = "excellent" | "good" | "satisfactory" | "needs_improvement" | "critical";
+type ScoreBandType = "excellent" | "good" | "satisfactory" | "needs_improvement" | "critical" | "not_applicable";
 
 const BAND_CONFIG: Record<
   ScoreBandType,
@@ -14,6 +14,7 @@ const BAND_CONFIG: Record<
   satisfactory:      { label: "Satisfactory",       bg: "#FEF3C7", text: "#92400E", dot: "#D97706" },
   needs_improvement: { label: "Needs Improvement",  bg: "#FFEDD5", text: "#9A3412", dot: "#EA580C" },
   critical:          { label: "Critical",           bg: "#FEE2E2", text: "#991B1B", dot: "#DC2626" },
+  not_applicable:    { label: "N/A",                bg: "#F3F4F6", text: "#6B7280", dot: "#9CA3AF" },
 };
 
 export function ScoreBandBadge({ band }: { band: string | null | undefined }) {
@@ -193,9 +194,14 @@ export function fmtDate(d: string | null | undefined): string {
 }
 
 export function fmtPct(v: number | string | null | undefined): string {
-  if (v == null) return "—";
-  const n = typeof v === "string" ? parseFloat(v) : v;
-  return Number.isFinite(n) ? n.toFixed(1) + "%" : "—";
+  if (v == null || v === "") return "—";
+  if (typeof v === "string") {
+    const trimmed = v.trim();
+    if (!trimmed) return "—";
+    const n = Number(trimmed);
+    return Number.isFinite(n) ? n.toFixed(1) + "%" : "—";
+  }
+  return Number.isFinite(v) ? v.toFixed(1) + "%" : "—";
 }
 
 export function fmtINR(v: number | null | undefined): string {

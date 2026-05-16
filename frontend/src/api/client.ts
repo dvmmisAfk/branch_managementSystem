@@ -18,34 +18,35 @@ async function parseJsonResponse(res: Response): Promise<unknown> {
 
 export class ApiError extends Error {
   readonly status: number;
+  readonly code?: string;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, code?: string) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.code = code;
   }
 }
 
-let accessToken: string | null =
-  typeof localStorage !== "undefined" ? localStorage.getItem("access_token") : null;
+/** In-memory access token (not persisted — refresh uses HttpOnly cookie). */
+let accessToken: string | null = null;
 
-/** Coalesces concurrent 401 refresh storms into a single /auth/refresh round-trip. */
 let refreshInFlight: Promise<string | null> | null = null;
 
-export function setTokens(access: string, refresh?: string): void {
+export function setAccessToken(access: string | null): void {
   accessToken = access;
-  localStorage.setItem("access_token", access);
-  if (refresh) localStorage.setItem("refresh_token", refresh);
+}
+
+/** True if we have a session (memory token or existing HttpOnly cookies from prior page load). */
+export function hasSessionHint(): boolean {
+  return accessToken !== null;
 }
 
 export function clearTokens(): void {
   accessToken = null;
-  localStorage.removeItem("access_token");
-  localStorage.removeItem("refresh_token");
 }
 
 export function loadStoredTokens(): string | null {
-  accessToken = localStorage.getItem("access_token");
   return accessToken;
 }
 
@@ -53,19 +54,22 @@ async function refreshAccess(): Promise<string | null> {
   if (refreshInFlight) return refreshInFlight;
   refreshInFlight = (async () => {
     try {
-      const refresh = localStorage.getItem("refresh_token");
-      if (!refresh) return null;
       const res = await fetch(`${getApiBaseUrl()}/auth/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refreshToken: refresh }),
+        credentials: "include",
+        body: JSON.stringify({}),
       });
       if (!res.ok) {
         clearTokens();
         return null;
       }
-      const data = (await res.json()) as { accessToken: string; refreshToken: string };
-      setTokens(data.accessToken, data.refreshToken);
+      const data = (await res.json()) as { accessToken: string };
+      if (!data?.accessToken) {
+        clearTokens();
+        return null;
+      }
+      setAccessToken(data.accessToken);
       return data.accessToken;
     } finally {
       refreshInFlight = null;
@@ -83,11 +87,12 @@ export type AuthUser = {
   employeeId?: string;
 };
 
-/** Sign in: supervisors use email; SFHs use employee ID. Persists tokens when successful. */
+/** Sign in: supervisors use email; SFHs use employee ID. Sets HttpOnly cookies + in-memory access token. */
 export async function loginWithCredentials(loginId: string, password: string): Promise<AuthUser> {
   const res = await fetch(`${getApiBaseUrl()}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "include",
     body: JSON.stringify({ loginId: loginId.trim(), password }),
   });
   const body = await parseJsonResponse(res);
@@ -96,16 +101,30 @@ export async function loginWithCredentials(loginId: string, password: string): P
       typeof body === "object" && body !== null && "error" in body ?
         String((body as { error: string }).error)
       : `HTTP ${res.status}`;
-    throw new ApiError(res.status, msg || "Login failed");
+    const code =
+      typeof body === "object" && body !== null && "code" in body ?
+        String((body as { code: string }).code)
+      : undefined;
+    throw new ApiError(res.status, msg || "Login failed", code);
   }
   const data = body as {
     accessToken: string;
-    refreshToken: string;
     user: AuthUser;
   };
   if (!data?.accessToken) throw new ApiError(res.status, "Invalid response from server");
-  setTokens(data.accessToken, data.refreshToken);
+  setAccessToken(data.accessToken);
   return data.user;
+}
+
+export async function logoutSession(): Promise<void> {
+  try {
+    await fetch(`${getApiBaseUrl()}/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+    });
+  } finally {
+    clearTokens();
+  }
 }
 
 /** SFH-only: notify supervisors of a password reset need (no self-service reset link). */
@@ -129,8 +148,6 @@ async function fetchWithAuth(
   path: string,
   init?: RequestInit
 ): Promise<{ res: Response; text: string }> {
-  loadStoredTokens();
-
   const headers = new Headers(init?.headers ?? {});
   if (
     !headers.has("Content-Type") &&
@@ -144,14 +161,18 @@ async function fetchWithAuth(
   async function send(tok: string | null): Promise<{ res: Response; text: string }> {
     const h = new Headers(baseHeaders);
     if (tok) h.set("Authorization", `Bearer ${tok}`);
-    const res = await fetch(`${getApiBaseUrl()}${path}`, { ...init, headers: h });
+    const res = await fetch(`${getApiBaseUrl()}${path}`, {
+      ...init,
+      headers: h,
+      credentials: "include",
+    });
     const text = await res.text();
     return { res, text };
   }
 
   let { res, text } = await send(accessToken);
 
-  if (res.status === 401 && localStorage.getItem("refresh_token")) {
+  if (res.status === 401) {
     const next = await refreshAccess();
     if (next) ({ res, text } = await send(next));
   }
@@ -177,7 +198,11 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
       typeof body === "object" && body !== null && "error" in body ?
         String((body as { error: string }).error)
       : res.statusText || `HTTP ${res.status}`;
-    throw new ApiError(res.status, message);
+    const code =
+      typeof body === "object" && body !== null && "code" in body ?
+        String((body as { code: string }).code)
+      : undefined;
+    throw new ApiError(res.status, message, code);
   }
 
   return body as T;
@@ -185,17 +210,20 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
 
 /** GET binary (e.g. PDF/XLSX) with the same auth + refresh behaviour as apiFetch. */
 export async function apiFetchBlob(path: string): Promise<Blob> {
-  loadStoredTokens();
   const baseInit: RequestInit = { method: "GET" };
 
   async function send(tok: string | null): Promise<Response> {
     const h = new Headers();
     if (tok) h.set("Authorization", `Bearer ${tok}`);
-    return fetch(`${getApiBaseUrl()}${path}`, { ...baseInit, headers: h });
+    return fetch(`${getApiBaseUrl()}${path}`, {
+      ...baseInit,
+      headers: h,
+      credentials: "include",
+    });
   }
 
   let res = await send(accessToken);
-  if (res.status === 401 && localStorage.getItem("refresh_token")) {
+  if (res.status === 401) {
     const next = await refreshAccess();
     if (next) res = await send(next);
   }
@@ -216,4 +244,10 @@ export async function apiFetchBlob(path: string): Promise<Blob> {
   }
 
   return res.blob();
+}
+
+/** Bootstrap session on app load via refresh cookie (no localStorage). */
+export async function bootstrapSession(): Promise<boolean> {
+  const tok = await refreshAccess();
+  return tok !== null;
 }

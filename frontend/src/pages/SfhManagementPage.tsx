@@ -304,13 +304,10 @@ export function SfhManagementPage() {
           }}
           columns={[
             {
-              title: "Name / Email",
+              title: "Name",
               key: "name",
               render: (_, r) => (
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{r.name}</div>
-                  <div style={{ fontSize: 12, color: "#6B7280" }}>{r.email}</div>
-                </div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{r.name}</div>
               ),
             },
             {

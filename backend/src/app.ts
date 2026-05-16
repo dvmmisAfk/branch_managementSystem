@@ -4,8 +4,10 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import { env, apiDebug } from "./config/env.js";
+import { getAllowedOriginList, isOriginAllowed } from "./lib/corsOrigins.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { enforceHttps } from "./middleware/enforceHttps.js";
+import { requestIdMiddleware } from "./middleware/requestId.js";
 import { createApiLimiter } from "./middleware/rateLimits.js";
 
 import authRoutes from "./routes/auth.js";
@@ -37,18 +39,32 @@ const app = express();
 
 app.set("trust proxy", 1);
 
-const allowedOrigins = env.ALLOWED_ORIGINS?.split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
+const allowedOrigins = getAllowedOriginList();
+
+const devDefaultOrigins = [
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "http://localhost:5174",
+  "http://127.0.0.1:5174",
+  "http://localhost:5175",
+  "http://127.0.0.1:5175",
+  "http://localhost:8080",
+  "http://127.0.0.1:8080",
+];
+
+const corsOrigins = allowedOrigins?.length ? allowedOrigins : devDefaultOrigins;
 
 app.use(helmet());
+app.use(requestIdMiddleware);
 app.use(
   cors({
     credentials: true,
-    origin:
-      allowedOrigins?.length ? allowedOrigins
-      : true,
-  })
+    origin(origin, callback) {
+      if (!origin) return callback(null, true);
+      if (corsOrigins.includes(origin) || isOriginAllowed(origin)) return callback(null, true);
+      callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
+  }),
 );
 app.use(cookieParser());
 app.use(express.json({ limit: "2mb" }));

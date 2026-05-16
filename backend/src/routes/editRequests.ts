@@ -7,9 +7,11 @@ import { requireRoles } from "../middleware/requireRoles.js";
 import { HttpError } from "../utils/HttpError.js";
 import { getSfhRecordForUser } from "../services/visit.service.js";
 import { writeAudit } from "../services/auditLog.service.js";
+import { requireSfhOrSupervisor } from "../middleware/requireSfhOrSupervisor.js";
+import { parsePagination } from "../utils/pagination.js";
 
 const router = Router();
-router.use(authenticate);
+router.use(authenticate, requireSfhOrSupervisor);
 
 const visitInclude = {
   visit: {
@@ -26,7 +28,10 @@ router.get("/", async (req, res, next) => {
   try {
     const user = req.user!;
     if (user.role === UserRole.supervisor) {
+      const { take, skip } = parsePagination(req);
       const requests = await prisma.visitEditRequest.findMany({
+        take,
+        skip,
         orderBy: { createdAt: "desc" },
         include: {
           ...visitInclude,
@@ -37,14 +42,17 @@ router.get("/", async (req, res, next) => {
     } else if (user.role === UserRole.sfh) {
       const sfh = await getSfhRecordForUser(user.id, UserRole.sfh);
       if (!sfh) throw new HttpError("SFH not found", 404);
+      const { take, skip } = parsePagination(req);
       const requests = await prisma.visitEditRequest.findMany({
         where: { sfhId: sfh.id },
+        take,
+        skip,
         orderBy: { createdAt: "desc" },
         include: visitInclude,
       });
       res.json(requests);
     } else {
-      throw new HttpError("Forbidden", 403);
+      throw new HttpError("Forbidden", 403, undefined, "AUTH_FORBIDDEN");
     }
   } catch (e) {
     next(e);

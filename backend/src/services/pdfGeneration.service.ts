@@ -22,11 +22,15 @@ export function fmtInr(n: string | number | null | undefined): string {
 
 export type VisitPdfModel = Prisma.BranchVisitGetPayload<{
   include: {
-    sfh: { include: { user: true } };
+    sfh: { include: { user: { select: { name: true, email: true } } } };
     branch: true;
     quarter: true;
-    scores: { include: { subcategory: { include: { category: true } } } };
-    issues: { include: { category: true } };
+    scores: {
+      include: {
+        subcategory: { include: { category: { select: { id: true, name: true, displayOrder: true } } } };
+      };
+    };
+    issues: { include: { category: { select: { id: true, name: true } } } };
     scoreSnapshot: true;
   };
 }> & {
@@ -36,6 +40,8 @@ export type VisitPdfModel = Prisma.BranchVisitGetPayload<{
     otExpenses: string | number | null;
     actionPointsExpenses: string | null;
   } | undefined)[];
+  /** FY quarter column headers (e.g. FY25-26 Q1) — one per `utilityByQ` slot. */
+  utilityQuarterLabels?: string[];
 };
 
 export type VisitUtilityLineRow = { category: string; subCategory: string; amount: number };
@@ -273,8 +279,9 @@ const PDF_DOCUMENT_CSS = `
     print-color-adjust: exact;
   }
   /* Issues log status */
-  .badge-open   { background: #fee2e2; color: var(--danger); }
-  .badge-closed { background: #dcfce7; color: var(--success); }
+  .badge-open        { background: #fee2e2; color: var(--danger); }
+  .badge-in-progress { background: #fef3c7; color: #92400e; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .badge-closed      { background: #dcfce7; color: var(--success); }
   /* Assessment row status */
   .badge-yes { background: #dcfce7; color: var(--success); }
   .badge-no  { background: #fee2e2; color: var(--danger); }
@@ -457,16 +464,24 @@ function buildVisitHtml(model: VisitPdfModel): string {
   <div class="sc-band">${escapeHtml(String(band))}</div>
 </div>`;
 
+  // ── Ordered categories by displayOrder (M-1 fix: consistent S.No between summary and detail) ──
+  const orderedCategories = model.scores
+    .map((s) => s.subcategory.category)
+    .filter((c, i, arr) => arr.findIndex((x) => x.id === c.id) === i)
+    .sort((a, b) => a.displayOrder - b.displayOrder);
+
   // ── Scoring summary rows ──
   const summaryRows: string[] = [];
   let sn = 1;
   if (snap?.categoryBreakdown && typeof snap.categoryBreakdown === "object") {
     const jb = snap.categoryBreakdown as Record<string, { earned: number; max: number; pct: number }>;
-    for (const [name, v] of Object.entries(jb).sort(([a], [b]) => a.localeCompare(b))) {
+    for (const cat of orderedCategories) {
+      const v = jb[cat.name];
+      if (!v) continue;
       summaryRows.push(
         `<tr>
           <td class="c nowrap">${escapeHtml(sn++)}</td>
-          <td>${escapeHtml(name)}</td>
+          <td>${escapeHtml(cat.name)}</td>
           <td class="r nowrap">${v.earned}</td>
           <td class="r nowrap">${v.max}</td>
           <td class="r nowrap">${v.pct}%</td>
@@ -486,7 +501,7 @@ function buildVisitHtml(model: VisitPdfModel): string {
   );
 
   // ── Per-category detail sections — each on its own page ──
-  const categories = [...new Set(model.scores.map((x) => x.subcategory.category.name))].sort();
+  const categories = orderedCategories.map((c) => c.name);
   let detailSections = "";
   let sno = 1;
   for (const catName of categories) {
@@ -526,45 +541,46 @@ function buildVisitHtml(model: VisitPdfModel): string {
 </section>`;
   }
 
-  // ── Issues log rows ──
+  // ── Issues log rows ── (C-1 fix: map enum values to correct badge classes)
   let issuesRows = "";
   for (let i = 0; i < model.issues.length; i++) {
-    const it     = model.issues[i];
-    const status = (it.issueStatus ?? "").toLowerCase() === "closed" ? "closed" : "open";
+    const it = model.issues[i];
+    const badgeClass =
+      it.issueStatus === "resolved"    ? "badge-closed"
+      : it.issueStatus === "in_progress" ? "badge-in-progress"
+      : "badge-open";
     issuesRows += `<tr>
       <td class="c nowrap">${i + 1}</td>
       <td>${escapeHtml(it.category.name)}</td>
       <td>${escapeHtml(it.issueDescription)}</td>
       <td class="c nowrap">${escapeHtml(it.scheduledClosureDate?.toISOString().slice(0, 10) ?? "")}</td>
-      <td class="c"><span class="badge badge-${status}">${escapeHtml(it.issueStatus)}</span></td>
+      <td class="c"><span class="badge ${badgeClass}">${escapeHtml(it.issueStatus)}</span></td>
     </tr>`;
   }
 
-  // ── Utility table ──
-  // Every row must have exactly 5 cells (Particulars + Q1 + Q2 + Q3 + Action points).
-  // We avoid rowspan so that Units consumed and OT Expenses rows are never missing cells.
+  // ── Utility table (dynamic FY quarter columns from `utilityByQ`) ──
+  const qCount = model.utilityByQ.length;
+  const qLabels =
+    model.utilityQuarterLabels?.length === qCount ?
+      model.utilityQuarterLabels
+    : model.utilityByQ.map((_, i) => `Q${i + 1}`);
   const combineActions =
     model.utilityByQ.map((x) => x?.actionPointsExpenses ?? "").filter(Boolean).join("; ") || "–";
+  const qColWidth = qCount > 0 ? Math.floor(39 / qCount) : 13;
   const utilTbl =
     `<colgroup>
       <col style="width:22%"/>
-      <col style="width:13%"/>
-      <col style="width:13%"/>
-      <col style="width:13%"/>
+      ${qLabels.map(() => `<col style="width:${qColWidth}%"/>`).join("")}
       <col style="width:39%"/>
     </colgroup>
     <thead><tr>
       <th>Particulars</th>
-      <th class="r nowrap">FY-Q1</th>
-      <th class="r nowrap">FY-Q2</th>
-      <th class="r nowrap">FY-Q3</th>
+      ${qLabels.map((l) => `<th class="r nowrap">${escapeHtml(l)}</th>`).join("")}
       <th>Action points to reduce expenses</th>
     </tr></thead>` +
     `<tbody>` +
-    // Row 1 — Electricity: carries the action points value
-    `<tr><td>Electricity (₹)</td>${[0, 1, 2]
-      .map((i) => {
-        const rowu = model.utilityByQ[i];
+    `<tr><td>Electricity (₹)</td>${model.utilityByQ
+      .map((rowu) => {
         const v =
           rowu?.electricityBillAmount === null || rowu?.electricityBillAmount === undefined
             ? "–"
@@ -572,18 +588,14 @@ function buildVisitHtml(model: VisitPdfModel): string {
         return `<td class="r">${escapeHtml(v)}</td>`;
       })
       .join("")}<td>${escapeHtml(combineActions)}</td></tr>` +
-    // Row 2 — Units consumed: empty action-points cell keeps column count correct
-    `<tr><td>Units consumed</td>${[0, 1, 2]
-      .map((i) => {
-        const rowu = model.utilityByQ[i];
+    `<tr><td>Units consumed</td>${model.utilityByQ
+      .map((rowu) => {
         const has = rowu?.unitsConsumed !== null && rowu?.unitsConsumed !== undefined;
-        return `<td class="r">${escapeHtml(has ? fmtInr(rowu!.unitsConsumed) : "–")}</td>`;
+        return `<td class="r">${escapeHtml(has ? fmtInr(rowu.unitsConsumed) : "–")}</td>`;
       })
       .join("")}<td></td></tr>` +
-    // Row 3 — OT Expenses: empty action-points cell keeps column count correct
-    `<tr><td>OT Expenses (₹)</td>${[0, 1, 2]
-      .map((i) => {
-        const rowu = model.utilityByQ[i];
+    `<tr><td>OT Expenses (₹)</td>${model.utilityByQ
+      .map((rowu) => {
         const v =
           rowu?.otExpenses === null || rowu?.otExpenses === undefined
             ? "–"

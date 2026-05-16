@@ -3,12 +3,13 @@ import { Prisma, UserRole } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { authenticate } from "../middleware/authenticate.js";
+import { requireSfhOrSupervisor } from "../middleware/requireSfhOrSupervisor.js";
 import { HttpError } from "../utils/HttpError.js";
 import { assertBranchAssignedToSfh, getSfhRecordForUser } from "../services/visit.service.js";
 
 const router = Router();
 
-router.use(authenticate);
+router.use(authenticate, requireSfhOrSupervisor);
 
 router.get("/", async (req, res, next) => {
   try {
