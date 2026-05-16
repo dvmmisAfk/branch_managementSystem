@@ -63,6 +63,18 @@ export function parseVisitUtilityLinesJson(json: unknown): VisitUtilityLineRow[]
   return out;
 }
 
+/**
+ * Renders a status string (yes / no / not_applicable) as a colour-coded pill badge.
+ * Falls back to escaped raw text for any other value.
+ */
+function statusBadge(status: string | null | undefined): string {
+  const s = (status ?? "").trim().toLowerCase();
+  if (s === "yes")            return `<span class="badge badge-yes">Yes</span>`;
+  if (s === "no")             return `<span class="badge badge-no">No</span>`;
+  if (s === "not_applicable") return `<span class="badge badge-na">N/A</span>`;
+  return escapeHtml(status ?? "");
+}
+
 /** Shared print stylesheet for management PDFs (A4, Puppeteer). */
 const PDF_DOCUMENT_CSS = `
   :root {
@@ -108,6 +120,7 @@ const PDF_DOCUMENT_CSS = `
   /* ── Section structure ─────────────────────────────────────── */
   .sec { margin-bottom: 18px; }
 
+  /* Keep heading glued to the table that follows it */
   .sec-title {
     font-size: 12px;
     font-weight: 700;
@@ -116,11 +129,15 @@ const PDF_DOCUMENT_CSS = `
     padding-left: 8px;
     margin: 16px 0 10px;
     line-height: 1.4;
+    page-break-after: avoid;
   }
   h2.sec-title { font-size: 12px; }
   h3.sec-title { font-size: 11px; margin-top: 6px; }
 
   .sec-sub { font-size: 9.5px; color: var(--muted); margin: -6px 0 10px; }
+
+  /* Force a page break before major sections */
+  .page-start { page-break-before: always; }
 
   /* ── Key-value profile table ───────────────────────────────── */
   .kv { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
@@ -183,6 +200,7 @@ const PDF_DOCUMENT_CSS = `
     margin-top: 6px;
     table-layout: fixed;
   }
+  /* Auto-layout variant: lets browser size columns to fit content */
   .tbl-auto { table-layout: auto; }
 
   /* Repeat header row on each page */
@@ -228,7 +246,10 @@ const PDF_DOCUMENT_CSS = `
   .tbl th.r, .tbl td.r { text-align: right; }
   .tbl th.c, .tbl td.c { text-align: center; }
 
-  /* ── Status badges ─────────────────────────────────────────── */
+  /* Fixed-width column: never wrap header or value */
+  .tbl th.nowrap, .tbl td.nowrap { white-space: nowrap; }
+
+  /* ── Pill badges ───────────────────────────────────────────── */
   .badge {
     display: inline-block;
     padding: 2px 8px;
@@ -241,8 +262,13 @@ const PDF_DOCUMENT_CSS = `
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
+  /* Issues log status */
   .badge-open   { background: #fee2e2; color: var(--danger); }
   .badge-closed { background: #dcfce7; color: var(--success); }
+  /* Assessment row status */
+  .badge-yes { background: #dcfce7; color: var(--success); }
+  .badge-no  { background: #fee2e2; color: var(--danger); }
+  .badge-na  { background: #f1f5f9; color: var(--muted); }
 
   /* ── Signature row ─────────────────────────────────────────── */
   .sign-row { margin-top: 28px; width: 100%; border-collapse: collapse; }
@@ -368,7 +394,7 @@ function buildVisitHtml(model: VisitPdfModel): string {
   const pct  = snap ? `${snap.scorePercentage}%` : "–";
   const band = snap?.scoreBand ?? "–";
 
-  // ── Score card (prominent, full-width, above scoring table) ──
+  // ── Score card — rendered after the scoring summary table ──
   const scoreCardHtml = `
 <div class="score-card">
   <div class="sc-label">Overall score</div>
@@ -384,11 +410,11 @@ function buildVisitHtml(model: VisitPdfModel): string {
     for (const [name, v] of Object.entries(jb).sort(([a], [b]) => a.localeCompare(b))) {
       summaryRows.push(
         `<tr>
-          <td class="c">${escapeHtml(sn++)}</td>
+          <td class="c nowrap">${escapeHtml(sn++)}</td>
           <td>${escapeHtml(name)}</td>
-          <td class="r">${v.earned}</td>
-          <td class="r">${v.max}</td>
-          <td class="r">${v.pct}%</td>
+          <td class="r nowrap">${v.earned}</td>
+          <td class="r nowrap">${v.max}</td>
+          <td class="r nowrap">${v.pct}%</td>
           <td></td>
         </tr>`
       );
@@ -397,14 +423,14 @@ function buildVisitHtml(model: VisitPdfModel): string {
   summaryRows.push(
     `<tr class="total">
       <td colspan="2">Grand total</td>
-      <td class="r">${escapeHtml(String(snap?.totalPointsEarned ?? "–"))}</td>
-      <td class="r">${escapeHtml(String(snap?.totalMaxPoints ?? "–"))}</td>
-      <td class="r">${escapeHtml(String(pct))}</td>
+      <td class="r nowrap">${escapeHtml(String(snap?.totalPointsEarned ?? "–"))}</td>
+      <td class="r nowrap">${escapeHtml(String(snap?.totalMaxPoints ?? "–"))}</td>
+      <td class="r nowrap">${escapeHtml(String(pct))}</td>
       <td></td>
     </tr>`
   );
 
-  // ── Per-category detail sections ──
+  // ── Per-category detail sections — each on its own page ──
   const categories = [...new Set(model.scores.map((x) => x.subcategory.category.name))].sort();
   let detailSections = "";
   let sno = 1;
@@ -413,41 +439,31 @@ function buildVisitHtml(model: VisitPdfModel): string {
     let body = "";
     for (const r of rowsForCat) {
       body += `<tr>
-        <td class="c">${sno++}</td>
+        <td class="c nowrap">${sno++}</td>
         <td>${escapeHtml(r.subcategory.name)}</td>
         <td>${escapeHtml(r.subcategory.description || "")}</td>
-        <td>${escapeHtml(r.status)}</td>
+        <td class="c">${statusBadge(r.status)}</td>
         <td>${escapeHtml(r.observations)}</td>
-        <td>${escapeHtml(r.remsNumber)}</td>
-        <td class="r">${escapeHtml(String(r.scoreGiven ?? ""))}</td>
-        <td class="r">${r.maxScore}</td>
+        <td class="nowrap">${escapeHtml(r.remsNumber)}</td>
+        <td class="r nowrap">${escapeHtml(String(r.scoreGiven ?? ""))}</td>
+        <td class="r nowrap">${r.maxScore}</td>
         <td>${escapeHtml(r.remarks)}</td>
       </tr>`;
     }
+    // page-start forces each category onto a new page
     detailSections += `
-<section class="sec">
+<section class="sec page-start">
   <h3 class="sec-title">${escapeHtml(catName)}</h3>
-  <table class="tbl">
-    <colgroup>
-      <col style="width:3%"/>
-      <col style="width:15%"/>
-      <col style="width:20%"/>
-      <col style="width:7%"/>
-      <col style="width:22%"/>
-      <col style="width:8%"/>
-      <col style="width:8%"/>
-      <col style="width:5%"/>
-      <col style="width:12%"/>
-    </colgroup>
+  <table class="tbl tbl-auto">
     <thead><tr>
-      <th class="c">S.No</th>
+      <th class="c nowrap">S.No</th>
       <th>Measurable point</th>
       <th>Check points</th>
-      <th>Status</th>
+      <th class="c nowrap">Status</th>
       <th>Observations</th>
-      <th>REMS</th>
-      <th class="r">Points given</th>
-      <th class="r">Max</th>
+      <th class="nowrap">REMS</th>
+      <th class="r nowrap">Points given</th>
+      <th class="r nowrap">Max</th>
       <th>Remarks by SFH</th>
     </tr></thead>
     <tbody>${body}</tbody>
@@ -461,30 +477,36 @@ function buildVisitHtml(model: VisitPdfModel): string {
     const it     = model.issues[i];
     const status = (it.issueStatus ?? "").toLowerCase() === "closed" ? "closed" : "open";
     issuesRows += `<tr>
-      <td class="c">${i + 1}</td>
+      <td class="c nowrap">${i + 1}</td>
       <td>${escapeHtml(it.category.name)}</td>
       <td>${escapeHtml(it.issueDescription)}</td>
-      <td class="c">${escapeHtml(it.scheduledClosureDate?.toISOString().slice(0, 10) ?? "")}</td>
+      <td class="c nowrap">${escapeHtml(it.scheduledClosureDate?.toISOString().slice(0, 10) ?? "")}</td>
       <td class="c"><span class="badge badge-${status}">${escapeHtml(it.issueStatus)}</span></td>
     </tr>`;
   }
 
   // ── Utility table ──
+  // Every row must have exactly 5 cells (Particulars + Q1 + Q2 + Q3 + Action points).
+  // We avoid rowspan so that Units consumed and OT Expenses rows are never missing cells.
   const combineActions =
     model.utilityByQ.map((x) => x?.actionPointsExpenses ?? "").filter(Boolean).join("; ") || "–";
   const utilTbl =
     `<colgroup>
-      <col style="width:25%"/>
-      <col style="width:15%"/>
-      <col style="width:15%"/>
-      <col style="width:15%"/>
-      <col style="width:30%"/>
+      <col style="width:22%"/>
+      <col style="width:13%"/>
+      <col style="width:13%"/>
+      <col style="width:13%"/>
+      <col style="width:39%"/>
     </colgroup>
     <thead><tr>
-      <th>Particulars</th><th class="r">FY-Q1</th><th class="r">FY-Q2</th><th class="r">FY-Q3</th>
+      <th>Particulars</th>
+      <th class="r nowrap">FY-Q1</th>
+      <th class="r nowrap">FY-Q2</th>
+      <th class="r nowrap">FY-Q3</th>
       <th>Action points to reduce expenses</th>
     </tr></thead>` +
     `<tbody>` +
+    // Row 1 — Electricity: carries the action points value
     `<tr><td>Electricity (₹)</td>${[0, 1, 2]
       .map((i) => {
         const rowu = model.utilityByQ[i];
@@ -494,14 +516,16 @@ function buildVisitHtml(model: VisitPdfModel): string {
             : fmtInr(rowu.electricityBillAmount);
         return `<td class="r">${escapeHtml(v)}</td>`;
       })
-      .join("")}<td rowspan="3">${escapeHtml(combineActions)}</td></tr>` +
+      .join("")}<td>${escapeHtml(combineActions)}</td></tr>` +
+    // Row 2 — Units consumed: empty action-points cell keeps column count correct
     `<tr><td>Units consumed</td>${[0, 1, 2]
       .map((i) => {
         const rowu = model.utilityByQ[i];
         const has = rowu?.unitsConsumed !== null && rowu?.unitsConsumed !== undefined;
         return `<td class="r">${escapeHtml(has ? fmtInr(rowu!.unitsConsumed) : "–")}</td>`;
       })
-      .join("")}</tr>` +
+      .join("")}<td></td></tr>` +
+    // Row 3 — OT Expenses: empty action-points cell keeps column count correct
     `<tr><td>OT Expenses (₹)</td>${[0, 1, 2]
       .map((i) => {
         const rowu = model.utilityByQ[i];
@@ -511,7 +535,7 @@ function buildVisitHtml(model: VisitPdfModel): string {
             : fmtInr(rowu.otExpenses);
         return `<td class="r">${escapeHtml(v)}</td>`;
       })
-      .join("")}</tr></tbody>`;
+      .join("")}<td></td></tr></tbody>`;
 
   const b = model.branch;
 
@@ -535,23 +559,20 @@ function buildVisitHtml(model: VisitPdfModel): string {
   <p class="sec-sub"><strong>Electricity (last quarter)</strong>: ${escapeHtml(elq)}</p>`;
   if (visitUtilityLines.length) {
     visitUtilExtra += `
-<table class="tbl">
-  <colgroup>
-    <col style="width:4%"/>
-    <col style="width:28%"/>
-    <col style="width:36%"/>
-    <col style="width:32%"/>
-  </colgroup>
+<table class="tbl tbl-auto">
   <thead><tr>
-    <th class="c">#</th><th>Category</th><th>Sub category</th><th class="r">Amount (₹)</th>
+    <th class="c nowrap">#</th>
+    <th>Category</th>
+    <th>Sub category</th>
+    <th class="r nowrap">Amount (₹)</th>
   </tr></thead>
   <tbody>`;
     visitUtilityLines.forEach((row, i) => {
       visitUtilExtra += `<tr>
-        <td class="c">${i + 1}</td>
+        <td class="c nowrap">${i + 1}</td>
         <td>${escapeHtml(row.category)}</td>
         <td>${escapeHtml(row.subCategory)}</td>
-        <td class="r">${escapeHtml(fmtInr(row.amount))}</td>
+        <td class="r nowrap">${escapeHtml(fmtInr(row.amount))}</td>
       </tr>`;
     });
     visitUtilExtra += `</tbody></table>`;
@@ -596,30 +617,22 @@ function buildVisitHtml(model: VisitPdfModel): string {
   <p><strong>Flags:</strong> Infra upgrade ${model.isInfraUpgrade ? "Yes" : "No"} · Landlord issue ${model.landlordIssue ? `Yes — ${escapeHtml(model.landlordIssueDetails ?? "")}` : "No"} · Incident since last ${escapeHtml(model.incidentPreviousVisit ? model.incidentPreviousVisitDetails ?? "Yes" : "No")} · Audit points ${escapeHtml(model.auditPointsObserved ? model.auditPointsDetails ?? "Yes" : "No")} · Escalation ${escapeHtml(model.majorEscalation ? `${model.escalationDetails ?? ""} (${model.escalationClosureDate?.toISOString().slice(0, 10) ?? ""})` : "No")}</p>
 </section>
 
-${scoreCardHtml}
-
-<section class="sec">
+<section class="sec page-start">
   <h2 class="sec-title">Scoring summary</h2>
-  <table class="tbl">
-    <colgroup>
-      <col style="width:5%"/>
-      <col style="width:49%"/>
-      <col style="width:11%"/>
-      <col style="width:11%"/>
-      <col style="width:9%"/>
-      <col style="width:15%"/>
-    </colgroup>
+  <table class="tbl tbl-auto">
     <thead><tr>
-      <th class="c">S.No</th>
+      <th class="c nowrap">S.No</th>
       <th>Measurable point</th>
-      <th class="r">Points</th>
-      <th class="r">Max</th>
-      <th class="r">%</th>
+      <th class="r nowrap">Points</th>
+      <th class="r nowrap">Max</th>
+      <th class="r nowrap">%</th>
       <th>Remarks</th>
     </tr></thead>
     <tbody>${summaryRows.join("\n")}</tbody>
   </table>
 </section>
+
+${scoreCardHtml}
 
 <section class="sec">
   <h2 class="sec-title">Utility consumption</h2>
@@ -631,22 +644,15 @@ ${visitUtilExtra}
 
 ${detailSections}
 
-<section class="sec">
+<section class="sec page-start">
   <h2 class="sec-title">Issues log</h2>
-  <table class="tbl">
-    <colgroup>
-      <col style="width:4%"/>
-      <col style="width:18%"/>
-      <col style="width:46%"/>
-      <col style="width:16%"/>
-      <col style="width:16%"/>
-    </colgroup>
+  <table class="tbl tbl-auto">
     <thead><tr>
-      <th class="c">#</th>
+      <th class="c nowrap">#</th>
       <th>Category</th>
       <th>Description</th>
-      <th class="c">Scheduled closure</th>
-      <th class="c">Status</th>
+      <th class="c nowrap">Scheduled closure</th>
+      <th class="c nowrap">Status</th>
     </tr></thead>
     <tbody>${issuesRows}</tbody>
   </table>
