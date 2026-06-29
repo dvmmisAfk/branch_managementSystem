@@ -22,7 +22,6 @@ type SfhRow = {
 
 type AddForm = {
   name: string;
-  password: string;
   stateRegion: string;
   employeeCode: string;
   phone?: string;
@@ -41,12 +40,16 @@ type CreateSfhResponse = {
   userId: string;
   name: string;
   employeeCode: string;
-  temporaryPassword: string;
+  revealToken: string;
 };
 
-type GeneratePasswordResponse = { password: string };
-type RegeneratePasswordResponse = { temporaryPassword: string };
+type RegeneratePasswordResponse = { revealToken: string };
 type SupervisorPasswordResponse = { password: string };
+
+async function fetchRevealedPassword(revealToken: string): Promise<string> {
+  const { password } = await apiFetch<{ password: string }>(`/sfhs/password-reveal/${revealToken}`);
+  return password;
+}
 
 export function SfhManagementPage() {
   const navigate = useNavigate();
@@ -58,7 +61,6 @@ export function SfhManagementPage() {
 
   const [addOpen, setAddOpen] = useState(false);
   const [addSaving, setAddSaving] = useState(false);
-  const [addGenPwdLoading, setAddGenPwdLoading] = useState(false);
   const [addForm] = Form.useForm<AddForm>();
 
   const [editOpen, setEditOpen] = useState(false);
@@ -109,19 +111,6 @@ export function SfhManagementPage() {
     void load();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function fillGeneratedPasswordForAdd() {
-    setAddGenPwdLoading(true);
-    try {
-      const { password } = await apiFetch<GeneratePasswordResponse>("/sfhs/generate-password");
-      addForm.setFieldsValue({ password });
-      void message.success("Password generated — copy it before closing this dialog if needed.");
-    } catch (e: unknown) {
-      void message.error(e instanceof Error ? e.message : "Could not generate password");
-    } finally {
-      setAddGenPwdLoading(false);
-    }
-  }
-
   async function handleAdd(values: AddForm) {
     setAddSaving(true);
     try {
@@ -133,9 +122,11 @@ export function SfhManagementPage() {
           employeeId: values.employeeCode.trim(),
           stateRegion: values.stateRegion.trim(),
           phone: values.phone?.trim() || undefined,
-          password: values.password,
+          // No password — generated server-side so plaintext never leaves the backend.
         }),
       });
+      // Redeem the single-use reveal token (2-min TTL) — keeps plaintext out of proxy/APM logs.
+      const plainPassword = await fetchRevealedPassword(res.revealToken);
       modal.success({
         title: "SFH created",
         width: 520,
@@ -156,7 +147,7 @@ export function SfhManagementPage() {
               <span style={{ color: "#6B7280" }}>Password</span>
               <div>
                 <Text copyable strong>
-                  {res.temporaryPassword}
+                  {plainPassword}
                 </Text>
               </div>
             </div>
@@ -204,12 +195,13 @@ export function SfhManagementPage() {
     if (!editTarget) return;
     setEditPwdBusy(true);
     try {
-      const { temporaryPassword } = await apiFetch<RegeneratePasswordResponse>(
+      const { revealToken } = await apiFetch<RegeneratePasswordResponse>(
         `/sfhs/${editTarget.id}/regenerate-password`,
         { method: "POST" },
       );
+      const password = await fetchRevealedPassword(revealToken);
       setEditStoredPasswordRevealed(null);
-      setEditRevealedPassword(temporaryPassword);
+      setEditRevealedPassword(password);
       void message.success("New password set — share it securely with the SFH.");
     } catch (e: unknown) {
       void message.error(e instanceof Error ? e.message : "Failed to set password");
@@ -432,23 +424,19 @@ export function SfhManagementPage() {
             >
               <Input autoComplete="off" style={{ height: 38 }} placeholder="e.g. EMP-10234" />
             </Form.Item>
-            <Form.Item label="Password" required style={{ marginBottom: 0 }}>
-              <Space.Compact style={{ width: "100%" }}>
-                <Form.Item
-                  name="password"
-                  noStyle
-                  rules={[
-                    { required: true, message: "Click Generate password" },
-                    { min: 8, message: "At least 8 characters" },
-                  ]}
-                >
-                  <Input readOnly type="text" autoComplete="new-password" style={{ height: 38 }} placeholder="Click Generate" />
-                </Form.Item>
-                <Button type="default" loading={addGenPwdLoading} onClick={() => void fillGeneratedPasswordForAdd()} style={{ height: 38 }}>
-                  Generate
-                </Button>
-              </Space.Compact>
-              <div style={{ fontSize: 12, color: "#6B7280", marginTop: 4 }}>Visible and read-only — use Generate to set the value before saving.</div>
+            <Form.Item label="Password" style={{ marginBottom: 0 }}>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "#6B7280",
+                  padding: "8px 12px",
+                  background: "#F9FAFB",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: 8,
+                }}
+              >
+                A secure password is generated automatically when you save. It will be shown once after creation — copy and share it securely with the SFH.
+              </div>
             </Form.Item>
             <Form.Item name="stateRegion" label="State / Region" rules={[{ required: true, message: "State or region is required" }]}>
               <Input style={{ height: 38 }} />

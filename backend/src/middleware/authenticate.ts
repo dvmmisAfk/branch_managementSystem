@@ -27,7 +27,8 @@ export function authenticate(req: Request, _res: Response, next: NextFunction) {
     return next(new HttpError("Unauthorized", 401, undefined, "AUTH_REQUIRED"));
   }
   try {
-    const payload = jwt.verify(token, env.JWT_SECRET) as JwtUser;
+    // F-01: Pin algorithm to prevent alg:none / algorithm-confusion attacks.
+    const payload = jwt.verify(token, env.JWT_SECRET, { algorithms: ["HS256"] }) as JwtUser;
     const parsed = jwtUserSchema.safeParse(payload);
     if (!parsed.success) {
       return next(new HttpError("Invalid token payload", 401, undefined, "AUTH_INVALID_TOKEN"));

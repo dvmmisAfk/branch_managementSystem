@@ -171,11 +171,11 @@ async function main() {
   });
 
   const sfhSpecs = [
-    { name: "Ajay Kumar", legacyEmail: "ajay.kumar@company.com", employeeId: "SFH-001", stateRegion: "Uttarakhand" },
-    { name: "Anupam Sagar", legacyEmail: "anupam.sagar@company.com", employeeId: "SFH-002", stateRegion: "Uttarakhand" },
-    { name: "Shivendra Agrahari", legacyEmail: "shivendra.agrahari@company.com", employeeId: "SFH-003", stateRegion: "Uttar Pradesh" },
-    { name: "Anil Kumar", legacyEmail: "anil.kumar@company.com", employeeId: "SFH-004", stateRegion: "Rajasthan" },
-    { name: "Dharmbir Singh", legacyEmail: "dharmbir.singh@company.com", employeeId: "SFH-005", stateRegion: "Haryana" },
+    { name: "Rajiv Mehta", legacyEmail: "rajiv.mehta@company.com", employeeId: "SFH-101", stateRegion: "Uttarakhand" },
+    { name: "Priya Sharma", legacyEmail: "priya.sharma@company.com", employeeId: "SFH-102", stateRegion: "Uttarakhand" },
+    { name: "Suresh Verma", legacyEmail: "suresh.verma@company.com", employeeId: "SFH-103", stateRegion: "Uttar Pradesh" },
+    { name: "Deepak Gupta", legacyEmail: "deepak.gupta@company.com", employeeId: "SFH-104", stateRegion: "Rajasthan" },
+    { name: "Vinod Yadav", legacyEmail: "vinod.yadav@company.com", employeeId: "SFH-105", stateRegion: "Haryana" },
   ] as const;
 
   const sfhByName = new Map<string, string>();

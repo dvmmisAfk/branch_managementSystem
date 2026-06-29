@@ -14,14 +14,28 @@ export function getAllowedOriginSuffixes(): string[] {
     .filter(Boolean);
 }
 
-export function isOriginAllowed(origin: string): boolean {
+/**
+ * Pure origin check against explicit lists — testable without env dependency.
+ *
+ * F-06: The suffix match is HTTPS-only and requires a literal dot boundary before
+ * the suffix (e.g. `.vercel.app` does not match `evilvercel.app`). Callers are
+ * responsible for ensuring suffixes are as narrow as the deployment requires;
+ * bare public-registrable suffixes like `.vercel.app` remain risky even with this
+ * boundary check (see SECURITY_AUDIT.md F-06).
+ */
+export function isOriginAllowedWith(
+  origin: string,
+  exactList: string[],
+  suffixes: string[],
+): boolean {
   const o = origin.trim();
   if (!o) return false;
-  const exact = getAllowedOriginList();
-  if (exact.includes(o)) return true;
+  if (exactList.includes(o)) return true;
   const lower = o.toLowerCase();
+  // Suffix matching is restricted to HTTPS origins only.
   if (!lower.startsWith("https://")) return false;
-  for (const suffix of getAllowedOriginSuffixes()) {
+  for (const suffix of suffixes) {
+    // Normalise suffix to start with a dot so we require a dot boundary.
     const s = suffix.startsWith(".") ? suffix : `.${suffix}`;
     try {
       const host = new URL(lower).hostname;
@@ -31,4 +45,9 @@ export function isOriginAllowed(origin: string): boolean {
     }
   }
   return false;
+}
+
+/** Application-level wrapper that reads from validated env. */
+export function isOriginAllowed(origin: string): boolean {
+  return isOriginAllowedWith(origin, getAllowedOriginList(), getAllowedOriginSuffixes());
 }

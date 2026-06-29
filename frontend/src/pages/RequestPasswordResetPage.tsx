@@ -4,6 +4,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { ApiError, requestSfhPasswordResetFromLogin } from "../api/client";
 
+// SFH employee codes are short (e.g. SFH-101). 50 chars is a generous ceiling.
+const EMPLOYEE_ID_MAX = 50;
+
 /**
  * SFH-only flow: queues a reset request for supervisors (no email link).
  * Route must stay public (no RequireAuth).
@@ -15,13 +18,20 @@ export function RequestPasswordResetPage() {
   const [submitted, setSubmitted] = useState(false);
 
   async function onFinish(values: { employeeId: string }) {
+    const employeeId = values.employeeId.trim();
+    if (!employeeId) return;
+
     setLoading(true);
     try {
-      await requestSfhPasswordResetFromLogin(values.employeeId);
+      await requestSfhPasswordResetFromLogin(employeeId);
       setSubmitted(true);
-      void message.success("Request submitted. If that employee ID is active, a supervisor can generate a new password from SFH Management.");
+      void message.success(
+        "Request submitted. If that employee ID is active, a supervisor will see a notification to set a new password.",
+      );
     } catch (e) {
-      void message.error(e instanceof ApiError ? e.message : "Could not submit request. Try again later.");
+      void message.error(
+        e instanceof ApiError ? e.message : "Could not submit request. Try again later.",
+      );
     } finally {
       setLoading(false);
     }
@@ -67,12 +77,26 @@ export function RequestPasswordResetPage() {
             SFH password help
           </Typography.Title>
           <Typography.Paragraph type="secondary" style={{ marginBottom: 0, fontSize: 13 }}>
-            Enter your SFH employee ID. A supervisor will see a pending request and can set a new password from SFH Management.
+            Enter your SFH employee ID. Your supervisor will receive a notification and can set a new password.
           </Typography.Paragraph>
         </div>
 
         {submitted ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div
+              style={{
+                background: "#F0FDF4",
+                border: "1px solid #BBF7D0",
+                borderRadius: 8,
+                padding: "12px 16px",
+                fontSize: 13,
+                color: "#166534",
+                textAlign: "center",
+                marginBottom: 4,
+              }}
+            >
+              Request submitted. Your supervisor has been notified and will set a new password shortly.
+            </div>
             <Button type="primary" block size="large" onClick={() => navigate("/login", { replace: true })}>
               Back to sign in
             </Button>
@@ -82,11 +106,30 @@ export function RequestPasswordResetPage() {
             <Form.Item
               name="employeeId"
               label={<span style={{ fontSize: 13, fontWeight: 500 }}>Employee ID</span>}
-              rules={[{ required: true, message: "Enter your SFH employee ID" }]}
+              rules={[
+                { required: true, message: "Enter your SFH employee ID" },
+                {
+                  pattern: /^[A-Za-z0-9\-]{2,50}$/,
+                  message: "Employee ID should contain only letters, numbers, and hyphens",
+                },
+                { max: EMPLOYEE_ID_MAX, message: `Must be ${EMPLOYEE_ID_MAX} characters or fewer` },
+              ]}
             >
-              <Input placeholder="e.g. SFH-001" autoComplete="username" style={{ height: 42 }} />
+              <Input
+                placeholder="e.g. SFH-101"
+                autoComplete="username"
+                maxLength={EMPLOYEE_ID_MAX}
+                style={{ height: 42 }}
+              />
             </Form.Item>
-            <Button htmlType="submit" type="primary" block loading={loading} size="large" style={{ fontWeight: 600 }}>
+            <Button
+              htmlType="submit"
+              type="primary"
+              block
+              loading={loading}
+              size="large"
+              style={{ fontWeight: 600 }}
+            >
               Submit request
             </Button>
           </Form>

@@ -11,6 +11,7 @@ import {
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { ApiError, apiFetch, clearTokens, logoutSession } from "../api/client";
+import { NotificationBell } from "./NotificationBell";
 
 const { useBreakpoint } = Grid;
 const { Header, Content } = Layout;
@@ -210,6 +211,7 @@ export function AppLayout() {
           ) : (
             <Spin size="small" />
           )}
+          <NotificationBell role={me?.role ?? ""} />
           <Button
             size="small"
             onClick={logout}

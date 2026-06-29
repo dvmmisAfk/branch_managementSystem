@@ -20,17 +20,26 @@ import {
 
 const router = Router();
 
-function authJsonTokens(accessToken: string, refreshToken: string) {
-  if (env.NODE_ENV === "production") return { accessToken };
-  return { accessToken, refreshToken };
+// F-04: Pre-compute a dummy hash at startup for constant-time login rejection.
+// The bcrypt.hash call is non-blocking at import time; awaited in the handler.
+const dummyHashPromise = bcrypt.hash("__sentinel__never_used__for_login__", env.BCRYPT_ROUNDS);
+
+// F-12: Never return the refresh token in the JSON body (it is in the HttpOnly cookie).
+// Only the short-lived access token is needed by the frontend JS context.
+function authJsonTokens(accessToken: string) {
+  return { accessToken };
 }
 
 const loginSchema = z.object({
-  loginId: z.string().min(1),
-  password: z.string().min(1),
+  // 254 = RFC 5321 max email length; employee IDs are far shorter.
+  loginId: z.string().min(1).max(254),
+  // bcrypt truncates at 72 bytes; 128 is a generous ceiling that prevents
+  // oversized payloads from reaching the hashing step.
+  password: z.string().min(1).max(128),
 });
 
-const accessOpts = { expiresIn: env.JWT_EXPIRY } as SignOptions;
+// F-01: Pin algorithm explicitly so jwt.sign always uses HS256.
+const accessOpts = { expiresIn: env.JWT_EXPIRY, algorithm: "HS256" } as SignOptions;
 
 function signAccessToken(user: { id: string; email: string; name: string; role: string }) {
   return jwt.sign({ sub: user.id, email: user.email, name: user.name, role: user.role }, env.JWT_SECRET, accessOpts);
@@ -60,6 +69,8 @@ router.post("/login", loginLimiter, async (req, res, next) => {
   try {
     const body = loginSchema.parse(req.body);
     const raw = body.loginId.trim();
+    // F-04: Resolve the dummy hash early so bcrypt.compare timing is always spent.
+    const dummyHash = await dummyHashPromise;
     let user: {
       id: string;
       email: string;
@@ -68,13 +79,15 @@ router.post("/login", loginLimiter, async (req, res, next) => {
       passwordHash: string;
       isActive: boolean;
       emailVerifiedAt: Date | null;
-    };
+    } | null = null;
     let employeeId: string | undefined;
 
     if (raw.includes("@")) {
       const email = raw.toLowerCase();
       const row = await prisma.user.findUnique({ where: { email } });
       if (!row?.isActive || row.role !== UserRole.supervisor) {
+        // F-04: Always run bcrypt to equalise timing; discard result.
+        await bcrypt.compare(body.password, dummyHash);
         securityLog("auth_login_failure", { req, reason: "invalid_credentials" });
         throw new HttpError("Invalid credentials", 401, undefined, "AUTH_INVALID_CREDENTIALS");
       }
@@ -99,6 +112,8 @@ router.post("/login", loginLimiter, async (req, res, next) => {
         },
       });
       if (!sfh?.user?.isActive || sfh.user.role !== UserRole.sfh) {
+        // F-04: Always run bcrypt to equalise timing; discard result.
+        await bcrypt.compare(body.password, dummyHash);
         securityLog("auth_login_failure", { req, reason: "invalid_credentials" });
         throw new HttpError("Invalid credentials", 401, undefined, "AUTH_INVALID_CREDENTIALS");
       }
@@ -120,8 +135,9 @@ router.post("/login", loginLimiter, async (req, res, next) => {
     setAuthCookies(res, accessToken, refreshToken);
 
     securityLog("auth_login_success", { req, userId: user.id, role: user.role });
+    // F-12: refresh token is in the HttpOnly cookie; omit it from the JSON body.
     res.json({
-      ...authJsonTokens(accessToken, refreshToken),
+      ...authJsonTokens(accessToken),
       user: userJson(user, employeeId),
     });
   } catch (e) {
@@ -153,7 +169,8 @@ router.post("/refresh", refreshLimiter, async (req, res, next) => {
     setAuthCookies(res, accessToken, newRefresh);
 
     securityLog("auth_refresh", { req, userId: user.id });
-    res.json(authJsonTokens(accessToken, newRefresh));
+    // F-12: refresh token lives in the HttpOnly cookie; omit from JSON body.
+    res.json(authJsonTokens(accessToken));
   } catch (e) {
     if (e instanceof jwt.JsonWebTokenError) {
       return next(new HttpError("Invalid refresh token", 401, undefined, "AUTH_INVALID_REFRESH"));
@@ -195,7 +212,7 @@ router.get("/me", authenticate, async (req, res, next) => {
 /** SFH: queue a password reset for supervisor to fulfill (no email / self-service reset). */
 router.post("/sfh/request-password-reset", sfhPasswordResetRequestLimiter, async (req, res, next) => {
   try {
-    const body = z.object({ employeeId: z.string().min(2) }).parse(req.body);
+    const body = z.object({ employeeId: z.string().min(2).max(50) }).parse(req.body);
     const code = normalizeSfhEmployeeCode(body.employeeId);
     securityLog("auth_sfh_password_reset_request", { req, employeeIdLen: code.length });
 

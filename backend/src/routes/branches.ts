@@ -7,11 +7,22 @@ import { prisma } from "../lib/prisma.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { requireRoles } from "../middleware/requireRoles.js";
 import { HttpError } from "../utils/HttpError.js";
+import { securityLog } from "../lib/securityLog.js";
+
+// G-8 / xlsx HIGH CVE compensating controls:
+//   - File-size cap: 10 MB (Multer)
+//   - Row cap: reject workbooks that would force xlsx to process > MAX_UPLOAD_ROWS rows
+//   - Column cap: reject sheets wider than MAX_UPLOAD_COLS columns
+// xlsx.read() is synchronous; it cannot be safely interrupted once started, so the
+// row/col caps must be enforced AFTER the parse. A worker-thread isolation layer is
+// documented as a follow-up item in SECURITY_FIXES.md.
+const MAX_UPLOAD_ROWS = 5_000;
+const MAX_UPLOAD_COLS = 100;
 
 const router = Router();
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB — first line of defence against oversized payloads
 });
 
 function normHeader(s: string): string {
@@ -270,9 +281,44 @@ router.post(
   async (req, res, next) => {
     try {
       if (!req.file?.buffer) throw new HttpError("multipart field \"file\" is required", 400);
+
+      // G-8: parse then immediately check dimensions before processing any row data.
       const wb = XLSX.read(req.file.buffer, { type: "buffer" });
       const sheet = wb.Sheets[wb.SheetNames[0]];
+
+      // Estimate column count from the sheet's reference range (e.g. "A1:CZ500").
+      const ref = sheet["!ref"];
+      if (ref) {
+        const range = XLSX.utils.decode_range(ref);
+        const cols = range.e.c - range.s.c + 1;
+        if (cols > MAX_UPLOAD_COLS) {
+          securityLog("suspicious_upload_rejected", {
+            req,
+            reason: "xlsx_col_limit",
+            cols,
+            limit: MAX_UPLOAD_COLS,
+          });
+          throw new HttpError(
+            `Spreadsheet has ${cols} columns — maximum is ${MAX_UPLOAD_COLS}. Upload a simpler file.`,
+            422,
+          );
+        }
+      }
+
       const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
+
+      if (rows.length > MAX_UPLOAD_ROWS) {
+        securityLog("suspicious_upload_rejected", {
+          req,
+          reason: "xlsx_row_limit",
+          rows: rows.length,
+          limit: MAX_UPLOAD_ROWS,
+        });
+        throw new HttpError(
+          `Spreadsheet has ${rows.length} rows — maximum is ${MAX_UPLOAD_ROWS}. Split the file and upload in batches.`,
+          422,
+        );
+      }
       let inserted = 0;
       let updated = 0;
       const errors: { row: number; reason: string }[] = [];

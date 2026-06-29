@@ -1,7 +1,23 @@
 import type { Request } from "express";
+import type { Store } from "express-rate-limit";
 import { isIP } from "node:net";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { securityLog } from "../lib/securityLog.js";
+
+// Populated by initRateLimitStore() during app startup (before any requests).
+let _sharedStore: Store | undefined;
+
+/**
+ * Called once at startup (after the Redis client is ready).
+ * If never called, all limiters fall back to in-memory MemoryStore.
+ */
+export function setRateLimitStore(store: Store | undefined): void {
+  _sharedStore = store;
+}
+
+function storeOpt() {
+  return _sharedStore ? { store: _sharedStore } : {};
+}
 
 /** Stable client key for express-rate-limit v8 (never undefined — undefined breaks the MemoryStore). */
 function apiLimiterClientKey(req: Request): string {
@@ -36,6 +52,7 @@ function keyLogin(req: Request): string {
 
 export const loginLimiter = rateLimit({
   ...rateLimitSafeClientKey,
+  ...storeOpt(),
   windowMs: 15 * 60 * 1000,
   max: 10,
   standardHeaders: true,
@@ -47,10 +64,13 @@ export const loginLimiter = rateLimit({
   },
 });
 
+// 20 per 15-min per IP: covers multiple browser tabs silently refreshing,
+// while blocking token-rotation abuse that the old limit of 60 allowed.
 export const refreshLimiter = rateLimit({
   ...rateLimitSafeClientKey,
+  ...storeOpt(),
   windowMs: 15 * 60 * 1000,
-  max: 60,
+  max: 20,
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res, _next, options) => {
@@ -61,6 +81,7 @@ export const refreshLimiter = rateLimit({
 
 export const forgotPasswordLimiter = rateLimit({
   ...rateLimitSafeClientKey,
+  ...storeOpt(),
   windowMs: 60 * 60 * 1000,
   max: 5,
   standardHeaders: true,
@@ -73,6 +94,7 @@ export const forgotPasswordLimiter = rateLimit({
 
 export const resetPasswordLimiter = rateLimit({
   ...rateLimitSafeClientKey,
+  ...storeOpt(),
   windowMs: 60 * 60 * 1000,
   max: 15,
   standardHeaders: true,
@@ -85,6 +107,7 @@ export const resetPasswordLimiter = rateLimit({
 
 export const verifyEmailLimiter = rateLimit({
   ...rateLimitSafeClientKey,
+  ...storeOpt(),
   windowMs: 60 * 60 * 1000,
   max: 30,
   standardHeaders: true,
@@ -98,6 +121,7 @@ export const verifyEmailLimiter = rateLimit({
 /** Supervisor-only account creation */
 export const accountCreateLimiter = rateLimit({
   ...rateLimitSafeClientKey,
+  ...storeOpt(),
   windowMs: 60 * 60 * 1000,
   max: 30,
   standardHeaders: true,
@@ -112,6 +136,7 @@ export const accountCreateLimiter = rateLimit({
 export function createApiLimiter() {
   return rateLimit({
     ...rateLimitSafeClientKey,
+    ...storeOpt(),
     windowMs: 15 * 60 * 1000,
     max: 800,
     standardHeaders: true,
@@ -123,21 +148,25 @@ export function createApiLimiter() {
   });
 }
 
+// 5 attempts per hour per IP is generous for a legitimate forgot-password flow
+// and strict enough to blunt enumeration / spam.
 export const sfhPasswordResetRequestLimiter = rateLimit({
   ...rateLimitSafeClientKey,
+  ...storeOpt(),
   windowMs: 60 * 60 * 1000,
-  max: 15,
+  max: 5,
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res, _next, options) => {
     securityLog("rate_limit_exceeded", { req, limitType: "sfh_password_reset_request", limit: options.limit });
-    res.status(429).json({ error: "Too many requests. Try again later." });
+    res.status(429).json({ error: "Too many requests. Try again in an hour." });
   },
 });
 
 /** Reserved for future LLM / AI endpoints */
 export const aiGenerationLimiter = rateLimit({
   ...rateLimitSafeClientKey,
+  ...storeOpt(),
   windowMs: 60 * 60 * 1000,
   max: 20,
   standardHeaders: true,

@@ -12,10 +12,12 @@ import { accountCreateLimiter } from "../middleware/rateLimits.js";
 import { normalizeSfhEmployeeCode, syntheticEmailFromEmployeeCode } from "../lib/employeeAuth.js";
 import { generateSfhPassword } from "../lib/generateSfhPassword.js";
 import { securityLog } from "../lib/securityLog.js";
+import { env } from "../config/env.js";
 import {
   decryptSfhSupervisorPasswordVault,
   encryptSfhSupervisorPasswordVault,
 } from "../lib/sfhSupervisorPasswordVault.js";
+import { createRevealToken, redeemRevealToken } from "../lib/revealTokenStore.js";
 
 const router = Router();
 
@@ -26,8 +28,8 @@ const CreateSfhSchema = z.object({
   employeeId: z.string().min(2),
   phone: z.string().optional(),
   stateRegion: z.string().min(2),
-  /** Initial password chosen by supervisor (e.g. from Generate); stored until changed via regenerate or reset flow. */
-  password: z.string().min(8),
+  // No password field — password is generated server-side so plaintext never
+  // travels from the browser to the backend.
 });
 
 const UpdateSfhSchema = z.object({
@@ -39,16 +41,23 @@ const UpdateSfhSchema = z.object({
 });
 
 async function hashPassword(plain: string): Promise<string> {
-  const rounds = Number.parseInt(process.env.BCRYPT_ROUNDS ?? "12", 10);
-  return bcrypt.hash(plain, Number.isFinite(rounds) && rounds >= 10 ? rounds : 12);
+  return bcrypt.hash(plain, env.BCRYPT_ROUNDS);
 }
 
-/** Returns plaintext once for supervisor to share with the SFH. */
-async function setSfhUserPassword(userId: string): Promise<string> {
+/**
+ * Hash the password, update the user row, persist the encrypted blob to the
+ * StateFacilityHead row, and return a single-use reveal token (valid 2 min).
+ * The plaintext never appears in any response body — callers get only the token.
+ */
+async function setAndVaultSfhPassword(sfhId: string, userId: string): Promise<string> {
   const plain = generateSfhPassword();
   const passwordHash = await hashPassword(plain);
-  await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
-  return plain;
+  const supervisorPasswordEnc = encryptSfhSupervisorPasswordVault(plain);
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: userId }, data: { passwordHash } }),
+    prisma.stateFacilityHead.update({ where: { id: sfhId }, data: { supervisorPasswordEnc } }),
+  ]);
+  return createRevealToken(supervisorPasswordEnc);
 }
 
 /** List / lookup selects: omit `supervisor_password_enc` so reads work before migration is applied. */
@@ -114,7 +123,7 @@ router.get("/", async (req, res, next) => {
   }
 });
 
-/** Supervisor-only: random password suggestion for the Add SFH form (not persisted until create/regenerate). */
+/** Kept for backward compatibility — no longer called by the frontend (password is now generated server-side on POST /sfhs). */
 router.get("/generate-password", (_req, res) => {
   res.json({ password: generateSfhPassword() });
 });
@@ -168,11 +177,7 @@ router.post("/password-reset-requests/:requestId/fulfill", async (req, res, next
       throw new HttpError("Invalid request", 400);
     }
 
-    const temporaryPassword = await setSfhUserPassword(row.userId);
-    await prisma.stateFacilityHead.update({
-      where: { id: row.user.stateFacilityHead.id },
-      data: { supervisorPasswordEnc: encryptSfhSupervisorPasswordVault(temporaryPassword) },
-    });
+    const revealToken = await setAndVaultSfhPassword(row.user.stateFacilityHead.id, row.userId);
     await prisma.sfhPasswordResetRequest.update({
       where: { id: requestId },
       data: {
@@ -188,12 +193,13 @@ router.post("/password-reset-requests/:requestId/fulfill", async (req, res, next
       entityId: row.userId,
       metadata: { requestId },
     });
-        securityLog("auth_supervisor_sfh_password_set", {
+    securityLog("auth_supervisor_sfh_password_set", {
       req,
       targetUserId: row.userId,
       via: "reset_request",
     });
-    res.json({ temporaryPassword });
+    // Return a reveal token — not the plaintext password — to keep it out of response logs.
+    res.json({ revealToken });
   } catch (e) {
     next(e);
   }
@@ -213,11 +219,7 @@ router.post("/:id/regenerate-password", async (req, res, next) => {
     if (!sfh) throw new HttpError("SFH not found", 404);
     if (sfh.user.role !== UserRole.sfh) throw new HttpError("Invalid account", 400);
 
-    const temporaryPassword = await setSfhUserPassword(sfh.userId);
-    await prisma.stateFacilityHead.update({
-      where: { id },
-      data: { supervisorPasswordEnc: encryptSfhSupervisorPasswordVault(temporaryPassword) },
-    });
+    const revealToken = await setAndVaultSfhPassword(sfh.id, sfh.userId);
     await writeAudit({
       actorId: req.user!.id,
       action: "sfh_password_regenerate",
@@ -225,12 +227,38 @@ router.post("/:id/regenerate-password", async (req, res, next) => {
       entityId: sfh.userId,
       metadata: { sfhId: id },
     });
-        securityLog("auth_supervisor_sfh_password_set", {
+    securityLog("auth_supervisor_sfh_password_set", {
       req,
       targetUserId: sfh.userId,
       via: "regenerate",
     });
-    res.json({ temporaryPassword });
+    res.json({ revealToken });
+  } catch (e) {
+    next(e);
+  }
+});
+
+/**
+ * One-time password reveal. The supervisor receives a revealToken from
+ * regenerate-password or fulfill; this endpoint decrypts and returns the
+ * password exactly once. Second call returns 404.
+ *
+ * NOTE: Do not log response bodies for this endpoint in APM/proxy configurations.
+ */
+router.get("/password-reveal/:token", async (req, res, next) => {
+  try {
+    const raw = z.string().min(1).max(128).parse(req.params.token);
+    const encryptedBlob = redeemRevealToken(raw);
+    if (!encryptedBlob) {
+      throw new HttpError("Token not found, already used, or expired", 404, undefined, "REVEAL_TOKEN_INVALID");
+    }
+    let password: string;
+    try {
+      password = decryptSfhSupervisorPasswordVault(encryptedBlob);
+    } catch {
+      throw new HttpError("Could not decrypt stored password", 500);
+    }
+    res.json({ password });
   } catch (e) {
     next(e);
   }
@@ -272,21 +300,23 @@ router.get("/:id/supervisor-password", async (req, res, next) => {
 
 router.post("/", accountCreateLimiter, async (req, res, next) => {
   try {
-    const { name, employeeId, phone, stateRegion, password } = CreateSfhSchema.parse(req.body);
+    const { name, employeeId, phone, stateRegion } = CreateSfhSchema.parse(req.body);
     const code = normalizeSfhEmployeeCode(employeeId);
     const email = syntheticEmailFromEmployeeCode(code);
 
     const dupUser = await prisma.user.findUnique({ where: { email } });
     if (dupUser) throw new HttpError("This employee ID is already registered", 409);
-    const dupCode = await prisma.stateFacilityHead.findUnique({
+    const dupCode = await prisma.stateFacilityHead.findFirst({
       where: { employeeCode: code },
       select: { id: true },
     });
     if (dupCode) throw new HttpError("This employee ID is already in use", 409);
 
-    const temporaryPassword = password;
-    const passwordHash = await hashPassword(temporaryPassword);
-    const supervisorPasswordEnc = encryptSfhSupervisorPasswordVault(temporaryPassword);
+    // Generate password server-side — plaintext never appears in request/response bodies.
+    const plain = generateSfhPassword();
+    const passwordHash = await hashPassword(plain);
+    const supervisorPasswordEnc = encryptSfhSupervisorPasswordVault(plain);
+    const revealToken = createRevealToken(supervisorPasswordEnc);
 
     const user = await prisma.user.create({
       data: {
@@ -317,12 +347,13 @@ router.post("/", accountCreateLimiter, async (req, res, next) => {
       metadata: { employeeCode: code },
     });
 
+    // Return a reveal token in place of the plaintext password to keep it out of response logs.
     res.status(201).json({
       id: result.sfh.id,
       userId: result.user.id,
       name: result.user.name,
       employeeCode: code,
-      temporaryPassword,
+      revealToken,
     });
   } catch (e) {
     next(e);

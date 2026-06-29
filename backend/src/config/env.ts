@@ -8,6 +8,8 @@ const envSchema = z
     DATABASE_URL: z.string().min(1),
     JWT_SECRET: z.string().min(32),
     JWT_REFRESH_SECRET: z.string().min(32),
+    /** Separate secret used exclusively for the SFH supervisor-password vault (AES-256-GCM key derivation). Must differ from JWT_SECRET. */
+    VAULT_SECRET: z.string().min(32),
     JWT_EXPIRY: z.string().default("15m"),
     JWT_REFRESH_EXPIRY: z.string().default("7d"),
     PORT: z.coerce.number().default(3001),
@@ -29,6 +31,10 @@ const envSchema = z
      * Turn off before public production deploy (can leak internals).
      */
     API_DEBUG: z.enum(["true", "false"]).optional(),
+    /** Optional Redis URL for distributed rate-limit state (e.g. redis://localhost:6379). Falls back to in-memory (per-process) when unset. */
+    REDIS_URL: z.string().url().optional(),
+    /** bcrypt cost factor for password hashing (10–14, default 12). Higher = slower hash = more brute-force resistance. */
+    BCRYPT_ROUNDS: z.coerce.number().int().min(10).max(14).default(12),
   })
   .superRefine((val, ctx) => {
     if (val.NODE_ENV !== "production") return;
@@ -49,6 +55,27 @@ const envSchema = z
         code: z.ZodIssueCode.custom,
         message: "API_DEBUG must not be true in production (can leak stacks and sensitive diagnostics in JSON responses).",
         path: ["API_DEBUG"],
+      });
+    }
+    if (val.JWT_SECRET === val.JWT_REFRESH_SECRET) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "JWT_SECRET and JWT_REFRESH_SECRET must be different — each secret must be unique to its purpose.",
+        path: ["JWT_REFRESH_SECRET"],
+      });
+    }
+    if (val.VAULT_SECRET === val.JWT_SECRET) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "VAULT_SECRET must differ from JWT_SECRET — they serve different cryptographic purposes.",
+        path: ["VAULT_SECRET"],
+      });
+    }
+    if (val.VAULT_SECRET === val.JWT_REFRESH_SECRET) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "VAULT_SECRET must differ from JWT_REFRESH_SECRET — they serve different cryptographic purposes.",
+        path: ["VAULT_SECRET"],
       });
     }
   });

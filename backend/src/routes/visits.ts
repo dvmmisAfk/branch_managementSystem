@@ -192,10 +192,13 @@ router.get("/:id/issues", async (req, res, next) => {
   }
 });
 
+// F-13: Reusable date-string schema — requires YYYY-MM-DD; rejects freeform strings.
+const dateStringSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format");
+
 const issueBody = z.object({
   categoryId: z.string().uuid(),
   issue_description: z.string().min(1),
-  scheduled_closure_date: z.string().optional(),
+  scheduled_closure_date: dateStringSchema.optional(),
 });
 
 router.post("/:id/issues", requireRoles(UserRole.sfh), async (req, res, next) => {
@@ -370,7 +373,7 @@ router.post("/:id/submit", requireRoles(UserRole.sfh), async (req, res, next) =>
 });
 
 const unlockBody = z.object({
-  visit_date_actual: z.string().optional(),
+  visit_date_actual: dateStringSchema.optional(), // F-13: validated format
   reason: z.string().optional(),
 });
 
@@ -420,7 +423,7 @@ const branchFacilityZ = z
 const visitPatchSchema = z
   .object({
     visit_type: z.nativeEnum(VisitType).optional(),
-    visit_date_actual: z.string().nullable().optional(),
+    visit_date_actual: dateStringSchema.nullable().optional(), // F-13: validated format
     reason_for_no_visit: z.string().nullable().optional(),
     virtual_staff_contact_name: z.string().nullable().optional(),
     virtual_staff_contact_phone: z.string().nullable().optional(),
@@ -442,7 +445,7 @@ const visitPatchSchema = z
     audit_points_details: z.string().nullable().optional(),
     major_escalation: z.boolean().optional(),
     escalation_details: z.string().nullable().optional(),
-    escalation_closure_date: z.string().nullable().optional(),
+    escalation_closure_date: dateStringSchema.nullable().optional(), // F-13
     electricity_last_quarter: z.number().finite().nullable().optional(),
     utility_lines: z
       .array(
@@ -492,10 +495,32 @@ router.patch("/:id", requireRoles(UserRole.sfh), async (req, res, next) => {
     }
 
     if (body.branch_facility && Object.keys(body.branch_facility).length) {
+      // F-09: Capture previous values for the audit trail before overwriting.
+      const prevFacility = await prisma.branch.findUnique({
+        where: { id: visit.branchId },
+        select: {
+          upsCapacityKva: true,
+          upsBackupTimeMins: true,
+          acTonnage: true,
+          electricityLoadKw: true,
+          rmsVendorPresent: true,
+          rmsVendorName: true,
+          fireExtinguisherCount: true,
+          dgOwnership: true,
+          dgCapacityKva: true,
+        },
+      });
       await applyBranchFacilitySlice(
         visit.branchId,
         body.branch_facility as Parameters<typeof applyBranchFacilitySlice>[1]
       );
+      await writeAudit({
+        actorId: req.user!.id,
+        action: "branch_facility_update",
+        entityType: "Branch",
+        entityId: visit.branchId,
+        metadata: { visitId: visit.id, previous: prevFacility, updated: body.branch_facility },
+      });
     }
 
     const updated = await prisma.branchVisit.update({

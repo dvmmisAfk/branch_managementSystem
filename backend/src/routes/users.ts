@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { UserRole } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
+import { env } from "../config/env.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { requireRoles } from "../middleware/requireRoles.js";
 import { HttpError } from "../utils/HttpError.js";
@@ -13,9 +14,9 @@ const router = Router();
 router.use(authenticate, requireRoles(UserRole.supervisor));
 
 const createUserSchema = z.object({
-  name: z.string().min(1),
-  email: z.string().email(),
-  password: z.string().min(8),
+  name: z.string().min(1).max(100),
+  email: z.string().email().max(254),
+  password: z.string().min(8).max(128),
   role: z.literal(UserRole.branch_staff),
 });
 
@@ -42,7 +43,7 @@ router.get("/", async (_req, res, next) => {
 router.post("/", accountCreateLimiter, async (req, res, next) => {
   try {
     const body = createUserSchema.parse(req.body);
-    const passwordHash = await bcrypt.hash(body.password, 12);
+    const passwordHash = await bcrypt.hash(body.password, env.BCRYPT_ROUNDS);
     const user = await prisma.user.create({
       data: {
         name: body.name,
@@ -64,9 +65,9 @@ router.post("/", accountCreateLimiter, async (req, res, next) => {
 });
 
 const patchUserSchema = z.object({
-  name: z.string().min(1).optional(),
+  name: z.string().min(1).max(100).optional(),
   isActive: z.boolean().optional(),
-  password: z.string().min(8).optional(),
+  password: z.string().min(8).max(128).optional(),
 });
 
 router.patch("/:id", async (req, res, next) => {
@@ -78,7 +79,7 @@ router.patch("/:id", async (req, res, next) => {
     const data: { name?: string; isActive?: boolean; passwordHash?: string } = {};
     if (body.name !== undefined) data.name = body.name;
     if (body.isActive !== undefined) data.isActive = body.isActive;
-    if (body.password) data.passwordHash = await bcrypt.hash(body.password, 12);
+    if (body.password) data.passwordHash = await bcrypt.hash(body.password, env.BCRYPT_ROUNDS);
     const user = await prisma.user.update({ where: { id }, data });
     res.json({ id: user.id, name: user.name, email: user.email, role: user.role, isActive: user.isActive });
   } catch (e) {

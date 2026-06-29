@@ -10,6 +10,8 @@ import { enforceHttps } from "./middleware/enforceHttps.js";
 import { requestIdMiddleware } from "./middleware/requestId.js";
 import { createApiLimiter } from "./middleware/rateLimits.js";
 
+import { createRateLimitStore } from "./lib/rateLimitStore.js";
+import { setRateLimitStore } from "./middleware/rateLimits.js";
 import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/users.js";
 import sfhRoutes from "./routes/sfhs.js";
@@ -111,6 +113,10 @@ app.use("/api/v1", apiLimiter, api);
 app.use(errorHandler);
 
 void (async () => {
+  // F-05: Initialise Redis-backed rate-limit store before accepting requests.
+  const rateLimitRedisStore = await createRateLimitStore();
+  setRateLimitStore(rateLimitRedisStore);
+
   try {
     await ensureQuartersAhead();
   } catch (e) {

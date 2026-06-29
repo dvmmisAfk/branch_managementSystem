@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { env } from "../config/env.js";
 import { prisma } from "../lib/prisma.js";
 import { HttpError } from "../utils/HttpError.js";
 
@@ -9,7 +10,7 @@ function hashToken(raw: string): string {
 }
 
 function parseRefreshExpiry(): Date {
-  const raw = process.env.JWT_REFRESH_EXPIRY ?? "7d";
+  const raw = env.JWT_REFRESH_EXPIRY;
   const m = /^(\d+)([smhd])$/.exec(raw.trim());
   if (!m) return new Date(Date.now() + REFRESH_TTL_MS);
   const n = parseInt(m[1]!, 10);

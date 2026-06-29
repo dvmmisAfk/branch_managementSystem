@@ -4,6 +4,10 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { ApiError, bootstrapSession, loadStoredTokens, loginWithCredentials } from "../api/client";
 
+// Max lengths enforced both here (UX) and in backend Zod schema (authoritative).
+const LOGIN_ID_MAX = 254;
+const PASSWORD_MAX = 128;
+
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -22,16 +26,30 @@ export function LoginPage() {
   }, [navigate, redirectTo]);
 
   async function onFinish(values: { loginId: string; password: string }) {
+    const loginId = values.loginId.trim();
+    const password = values.password;
+
+    // Front-end sanity guards (backend enforces the same rules authoritatively).
+    if (!loginId || !password) return;
+    if (loginId.length > LOGIN_ID_MAX) {
+      void message.error("Login ID is too long.");
+      return;
+    }
+    if (password.length > PASSWORD_MAX) {
+      void message.error("Password is too long.");
+      return;
+    }
+
     setLoading(true);
     try {
-      const user = await loginWithCredentials(values.loginId.trim(), values.password);
-      message.success(`Welcome, ${user.name}`);
+      const user = await loginWithCredentials(loginId, password);
+      void message.success(`Welcome, ${user.name}`);
       navigate(redirectTo, { replace: true });
     } catch (e) {
       if (e instanceof ApiError) {
-        message.error(e.message);
+        void message.error(e.message);
       } else {
-        message.error("Cannot reach the API. Ensure the backend is running.");
+        void message.error("Cannot reach the API. Ensure the backend is running.");
       }
     } finally {
       setLoading(false);
@@ -86,12 +104,16 @@ export function LoginPage() {
           <Form.Item
             name="loginId"
             label={<span style={{ fontSize: 13, fontWeight: 500, color: "#374151" }}>Email or employee ID</span>}
-            rules={[{ required: true, message: "Enter your work email or SFH employee ID" }]}
+            rules={[
+              { required: true, message: "Enter your work email or SFH employee ID" },
+              { max: LOGIN_ID_MAX, message: `Must be ${LOGIN_ID_MAX} characters or fewer` },
+            ]}
             style={{ marginBottom: 16 }}
           >
             <Input
               placeholder="Work email or SFH employee ID"
               autoComplete="username"
+              maxLength={LOGIN_ID_MAX}
               style={{ height: 40 }}
             />
           </Form.Item>
@@ -99,13 +121,17 @@ export function LoginPage() {
           <Form.Item
             name="password"
             label={<span style={{ fontSize: 13, fontWeight: 500, color: "#374151" }}>Password</span>}
-            rules={[{ required: true, message: "Enter your password" }]}
+            rules={[
+              { required: true, message: "Enter your password" },
+              { max: PASSWORD_MAX, message: `Must be ${PASSWORD_MAX} characters or fewer` },
+            ]}
             style={{ marginBottom: 20 }}
           >
             <Input
               type={showPass ? "text" : "password"}
               placeholder="Password"
               autoComplete="current-password"
+              maxLength={PASSWORD_MAX}
               style={{ height: 40 }}
               suffix={
                 <button

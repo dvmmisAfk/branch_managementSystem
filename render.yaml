@@ -1,7 +1,8 @@
 # Render Blueprint — backend API + PostgreSQL
 # Docs: https://render.com/docs/blueprint-spec
 #
-# After deploy: set ALLOWED_ORIGINS to your Vercel URL(s) in the Render dashboard.
+# After deploy: set ALLOWED_ORIGINS to your exact Vercel URL in the Render dashboard
+# and remove or comment out ALLOWED_ORIGIN_SUFFIXES (see F-06 in SECURITY_AUDIT.md).
 
 databases:
   - name: branch-tracker-db
@@ -30,6 +31,11 @@ services:
         generateValue: true
       - key: JWT_REFRESH_SECRET
         generateValue: true
+      # F-02: VAULT_SECRET is the AES key-derivation secret for the SFH password vault.
+      # Must differ from JWT_SECRET. Generate separately: openssl rand -base64 48
+      # Set this manually in the Render dashboard — do NOT share it with JWT_SECRET.
+      - key: VAULT_SECRET
+        generateValue: true
       - key: JWT_EXPIRY
         value: 15m
       - key: JWT_REFRESH_EXPIRY
@@ -40,9 +46,16 @@ services:
         value: "true"
       - key: API_DEBUG
         value: "false"
-      # Set after Vercel deploy (exact production URL):
+      # F-06: Set ALLOWED_ORIGINS to the exact production Vercel URL after first deploy.
+      # Avoid relying on ALLOWED_ORIGIN_SUFFIXES in production — any *.vercel.app can
+      # make credentialed requests while the suffix is active. Remove it once the
+      # production URL is known.
       # - key: ALLOWED_ORIGINS
-      #   value: https://your-app.vercel.app
-      # Optional: allow all Vercel preview deployments (HTTPS, credentials-safe suffix match):
+      #   value: https://your-exact-app.vercel.app
+      # Temporary — replace with exact origin above after first deploy:
       - key: ALLOWED_ORIGIN_SUFFIXES
         value: .vercel.app
+      # F-05: Provide a Redis URL to enable persistent, distributed rate limiting.
+      # Without this, rate-limit counters reset on every container restart.
+      # - key: REDIS_URL
+      #   value: redis://...
