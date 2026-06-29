@@ -17,6 +17,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
+    "db:reseed-synthetic": "tsx scripts/reseed-synthetic-data.ts",
     "db:clear-visits": "node --experimental-strip-types prisma/scripts/clear-all-visits.ts",
     "extract:branches": "node scripts/extract-branches-from-rtf.mjs",
     "security:scan-secrets": "node scripts/scan-secrets.mjs",

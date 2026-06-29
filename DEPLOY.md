@@ -152,6 +152,37 @@ npm run db:seed
 
 **Do not** run seed on production if you already have live visit data.
 
+### Replace real company data with synthetic seed (production)
+
+If production still shows old SFH names (Ajay Kumar, SFH-001, …) instead of the synthetic roster (Rajiv Mehta, SFH-101, …), the Supabase database was never re-seeded — only your local DB was.
+
+**This permanently deletes** all branches, SFH accounts, mappings, and visits, then loads `branch-seed.json` + synthetic SFHs.
+
+1. Render → **branch-visit-backend** → **Shell**
+2. Set env vars in the shell (or add them in Dashboard → Environment first):
+
+```bash
+export SEED_SUPERVISOR_EMAIL=admin@tata.aia
+export SEED_SUPERVISOR_PASSWORD='YourSupervisorPassword'
+export RESEED_CONFIRM=WIPE_AND_RESEED
+```
+
+3. Preview (optional):
+
+```bash
+cd /app && npm run db:reseed-synthetic -- --dry-run
+```
+
+4. Run reseed:
+
+```bash
+cd /app && npm run db:reseed-synthetic
+```
+
+5. Save the one-time SFH passwords printed in the shell log (`[seed] SFH Rajiv Mehta — login ID: SFH-101 — …`).
+
+Expected result: **5 SFHs**, **177 branches** (ZK/ZC/ZD codes), supervisor login unchanged.
+
 ---
 
 ## 6. Verify
