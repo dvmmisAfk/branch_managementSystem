@@ -121,6 +121,7 @@ model SfhPasswordResetRequest {
 
   @@index([status])
   @@index([userId])
+  @@index([fulfilledById])
   @@map("sfh_password_reset_requests")
 }
 
@@ -163,6 +164,7 @@ model AuditLog {
   actor User @relation(fields: [actorId], references: [id], onDelete: Cascade)
 
   @@index([entityType, entityId])
+  @@index([actorId])
   @@map("audit_logs")
 }
 
@@ -245,6 +247,7 @@ model SfhBranchMapping {
   visits     BranchVisit[]
 
   @@index([sfhId, branchId, isCurrent])
+  @@index([approvedById])
   @@map("sfh_branch_mapping")
 }
 
@@ -351,6 +354,7 @@ model BranchVisit {
   @@unique([branchId, quarterId])
   @@index([sfhId, isSubmitted])
   @@index([quarterId])
+  @@index([mappingId])
   @@map("branch_visits")
 }
 
@@ -387,6 +391,8 @@ model VisitIssue {
   visit    BranchVisit          @relation(fields: [visitId], references: [id], onDelete: Cascade)
   category AssessmentCategory   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
+  @@index([visitId])
+  @@index([categoryId])
   @@map("visit_issues")
 }
 
@@ -438,6 +444,8 @@ model VisitEditRequest {
 
   @@index([visitId])
   @@index([status])
+  @@index([sfhId])
+  @@index([reviewedById])
   @@map("visit_edit_requests")
 }
 

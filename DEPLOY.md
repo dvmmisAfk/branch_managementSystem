@@ -86,12 +86,57 @@ CI runs on push (`.github/workflows/ci.yml`): backend typecheck, secret scan, fr
 
 ## 4. Wire CORS + cookies
 
-1. Copy the Vercel **production** URL (e.g. `https://xxx.vercel.app`)
+1. Copy the Vercel **production** URL (e.g. `https://xxx.vercel.app` or your custom domain)
 2. In Render → API service → Environment:
-   - `ALLOWED_ORIGINS` = that URL (comma-separate multiple if needed)
+   - `ALLOWED_ORIGINS` = that URL (comma-separate multiple if needed, e.g. `https://app.example.com,https://www.app.example.com`)
+   - **No trailing slash** — use `https://app.example.com` not `https://app.example.com/`
+   - Custom domains **do not** match `.vercel.app` — you must add the exact custom URL here
 3. Redeploy Render if you changed env vars
 
-Auth uses **HttpOnly cookies** (`SameSite=None; Secure`) for refresh and **in-memory access JWT** for API calls — required for cross-origin Vercel → Render.
+Auth uses **HttpOnly cookies** for refresh and **in-memory access JWT** for API calls.
+
+### Recommended: same-origin API proxy (custom domains)
+
+The frontend includes `middleware.ts` that proxies `/api/v1/*` to Render. This avoids CORS/cookie issues when you change Vercel domains.
+
+**Vercel → Environment variables (Production):**
+
+| Key | Value |
+|-----|--------|
+| `VITE_API_BASE_URL` | `/api/v1` |
+| `BACKEND_API_ORIGIN` | `https://YOUR-SERVICE.onrender.com` (no `/api/v1` suffix) |
+
+Then **Redeploy** Vercel (required — `VITE_*` is baked in at build time).
+
+With the proxy, the browser calls `https://your-domain.com/api/v1/...` (same origin). Render `ALLOWED_ORIGINS` is still good practice but no longer blocks the main app flow.
+
+### Alternative: direct cross-origin API
+
+| Key | Value |
+|-----|--------|
+| `VITE_API_BASE_URL` | `https://YOUR-SERVICE.onrender.com/api/v1` |
+
+Requires `ALLOWED_ORIGINS` on Render to exactly match your Vercel/custom domain and `COOKIE_SAME_SITE=none`.
+
+---
+
+## 4b. Custom domain on Vercel (troubleshooting)
+
+If the site worked on `*.vercel.app` but not after adding a custom domain:
+
+1. **Vercel → Domains** — confirm DNS shows **Valid** (not Pending)
+2. **Redeploy Vercel** after any env change (`VITE_API_BASE_URL`, `BACKEND_API_ORIGIN`)
+3. **Render `ALLOWED_ORIGINS`** — must include `https://your-custom-domain.com` (not just `.vercel.app`)
+4. Use **`VITE_API_BASE_URL=/api/v1`** + **`BACKEND_API_ORIGIN`** (proxy mode above) — simplest fix
+5. Browser DevTools → **Network** — if API calls go to `onrender.com` and fail with CORS, fix step 3 or switch to step 4
+
+**Symptoms:**
+
+| What you see | Likely cause |
+|--------------|--------------|
+| Vercel “This site can’t be reached” / DNS error | Domain DNS not pointed to Vercel yet |
+| Blank page or infinite spinner | API URL wrong or CORS blocked |
+| Login page loads, login fails | CORS or cookies (`COOKIE_SAME_SITE=none` on Render) |
 
 ---
 

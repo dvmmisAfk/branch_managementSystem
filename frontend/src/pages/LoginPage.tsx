@@ -95,9 +95,6 @@ export function LoginPage() {
           <h1 style={{ margin: "16px 0 0", fontSize: 22, fontWeight: 700, color: "#111827" }}>
             Branch Visit Tracker
           </h1>
-          <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6B7280" }}>
-            Work email · SFH: employee ID
-          </p>
         </div>
 
         <Form layout="vertical" onFinish={onFinish} requiredMark={false}>

@@ -2,7 +2,18 @@ import { env } from "../config/env.js";
 
 /** Exact origins from ALLOWED_ORIGINS (comma-separated). */
 export function getAllowedOriginList(): string[] {
-  return env.ALLOWED_ORIGINS?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
+  return (
+    env.ALLOWED_ORIGINS?.split(",")
+      .map((s) => normalizeOrigin(s))
+      .filter(Boolean) ?? []
+  );
+}
+
+/** Strip trailing slash so https://app.example.com/ matches browser Origin headers. */
+function normalizeOrigin(value: string): string {
+  const s = value.trim();
+  if (!s) return "";
+  return s.endsWith("/") ? s.slice(0, -1) : s;
 }
 
 /** Optional suffixes, e.g. `.vercel.app` for preview deployments (credentials-safe pattern match). */
@@ -28,7 +39,7 @@ export function isOriginAllowedWith(
   exactList: string[],
   suffixes: string[],
 ): boolean {
-  const o = origin.trim();
+  const o = normalizeOrigin(origin);
   if (!o) return false;
   if (exactList.includes(o)) return true;
   const lower = o.toLowerCase();
