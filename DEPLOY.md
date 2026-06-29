@@ -162,7 +162,7 @@ If production still shows old SFH names (Ajay Kumar, SFH-001, …) instead of th
 2. Set env vars in the shell (or add them in Dashboard → Environment first):
 
 ```bash
-export SEED_SUPERVISOR_EMAIL=admin@tata.aia
+export SEED_SUPERVISOR_EMAIL=admin@company.com
 export SEED_SUPERVISOR_PASSWORD='YourSupervisorPassword'
 export RESEED_CONFIRM=WIPE_AND_RESEED
 ```

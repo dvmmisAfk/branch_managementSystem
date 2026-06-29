@@ -3,7 +3,7 @@
  *
  * Usage (local or Render Shell — uses DATABASE_URL from env):
  *   RESEED_CONFIRM=WIPE_AND_RESEED \
- *   SEED_SUPERVISOR_EMAIL=admin@example.com \
+ *   SEED_SUPERVISOR_EMAIL=admin@company.com \
  *   SEED_SUPERVISOR_PASSWORD='YourSecurePass1' \
  *   npm run db:reseed-synthetic
  *

@@ -153,8 +153,8 @@ npm run dev          # vite → port 5173
 
 | Role | Sign-in | Password |
 |------|----------|------------|
-| Supervisor | Set `SEED_SUPERVISOR_EMAIL` and `SEED_SUPERVISOR_PASSWORD` in `backend/.env` (password ≥8 characters), then run seed — values are **not** stored in the repository. | Same as `SEED_SUPERVISOR_PASSWORD` after seed. |
-| SFH | **Employee ID** from seed (e.g. `SFH-001` … `SFH-005`), not email | Printed once in the console when you run `npm run db:seed` in `backend/` (random each seed). A supervisor can set a new password from **SFH Management → Edit → Generate new password**, or fulfill a pending reset via the API (`POST /sfhs/password-reset-requests/:requestId/fulfill`). |
+| Supervisor | `admin@company.com` (set via `SEED_SUPERVISOR_EMAIL` in `backend/.env`, then run seed) | Same as `SEED_SUPERVISOR_PASSWORD` after seed. |
+| SFH | **Employee ID** from seed (e.g. `SFH-101` … `SFH-105`), not email | Printed once in the console when you run `npm run db:seed` in `backend/` (random each seed). A supervisor can set a new password from **SFH Management → Edit → Generate new password**, or fulfill a pending reset via the API (`POST /sfhs/password-reset-requests/:requestId/fulfill`). |
 
 After `cd backend && npm run db:seed`, check the terminal for lines like `[seed] SFH … — login ID: … — one-time password: …`.
 
