@@ -7,17 +7,27 @@
  *   SEED_SUPERVISOR_PASSWORD='YourSecurePass1' \
  *   npm run db:reseed-synthetic
  *
+ * Production from your PC (no Render Shell): copy .env.production.local.example → .env.production.local,
+ * fill Supabase DATABASE_URL + Render VAULT_SECRET, then:
+ *   npm run db:reseed-synthetic:production
+ *
  * Preview counts only:
  *   npm run db:reseed-synthetic -- --dry-run
  */
-import "dotenv/config";
-import { spawnSync } from "node:child_process";
+import dotenv from "dotenv";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { PrismaClient, UserRole } from "@prisma/client";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const backendRoot = path.resolve(__dirname, "..");
+
+// Default .env first, then optional production overlay (gitignored).
+dotenv.config({ path: path.join(backendRoot, ".env") });
+dotenv.config({ path: path.join(backendRoot, ".env.production.local"), override: true });
+
+import { spawnSync } from "node:child_process";
+import { PrismaClient, UserRole } from "@prisma/client";
+
 const prisma = new PrismaClient();
 
 const CONFIRM_VALUE = "WIPE_AND_RESEED";
@@ -76,7 +86,7 @@ function runSeed() {
   const result = spawnSync(process.platform === "win32" ? "npx.cmd" : "npx", ["tsx", "prisma/seed.ts"], {
     cwd: backendRoot,
     stdio: "inherit",
-    env: process.env,
+    env: { ...process.env, DOTENV_CONFIG_PATH: path.join(backendRoot, ".env.production.local") },
   });
   if (result.status !== 0) {
     process.exit(result.status ?? 1);

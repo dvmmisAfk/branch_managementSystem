@@ -1,4 +1,4 @@
-import "dotenv/config";
+import dotenv from "dotenv";
 import path from "path";
 import fs from "fs";
 import bcrypt from "bcryptjs";
@@ -10,6 +10,12 @@ import { normalizeSfhEmployeeCode, syntheticEmailFromEmployeeCode } from "../src
 import { encryptSfhSupervisorPasswordVault } from "../src/lib/sfhSupervisorPasswordVault.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const backendRoot = path.resolve(__dirname, "..");
+dotenv.config({ path: path.join(backendRoot, ".env") });
+if (process.env.DOTENV_CONFIG_PATH) {
+  dotenv.config({ path: process.env.DOTENV_CONFIG_PATH, override: true });
+}
+
 const prisma = new PrismaClient();
 
 type BranchRow = {
