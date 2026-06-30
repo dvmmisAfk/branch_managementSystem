@@ -8,6 +8,7 @@ import { authenticate } from "../middleware/authenticate.js";
 import { requireRoles } from "../middleware/requireRoles.js";
 import { HttpError } from "../utils/HttpError.js";
 import { securityLog } from "../lib/securityLog.js";
+import { writeAudit } from "../services/auditLog.service.js";
 
 // G-8 / xlsx HIGH CVE compensating controls:
 //   - File-size cap: 10 MB (Multer)
@@ -612,30 +613,67 @@ router.patch("/:id", requireRoles(UserRole.supervisor), async (req, res, next) =
 
 
 
-router.delete("/:id", requireRoles(UserRole.supervisor), async (req, res, next) => {
+const destroyBranchSchema = z.object({
+  branchCode: z.string().min(1).max(20),
+});
 
-
+router.post("/:id/destroy", requireRoles(UserRole.supervisor), async (req, res, next) => {
   try {
-
-
     const id = z.string().uuid().parse(req.params.id);
+    const { branchCode } = destroyBranchSchema.parse(req.body);
+    const typedCode = branchCode.trim();
 
+    const branch = await prisma.branch.findUnique({ where: { id } });
+    if (!branch) throw new HttpError("Branch not found", 404);
+    if (branch.isActive) {
+      throw new HttpError("Branch must be deactivated before it can be deleted.", 409);
+    }
+    if (typedCode !== branch.branchCode) {
+      throw new HttpError("Branch code does not match. Type the exact code shown for this branch.", 400);
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.branch.delete({ where: { id } });
+    });
+
+    await writeAudit({
+      actorId: req.user!.id,
+      action: "branch_destroy",
+      entityType: "branch",
+      entityId: id,
+      metadata: { branchCode: branch.branchCode, branchName: branch.branchName },
+    });
+
+    securityLog("branch_destroyed", { branchId: id, branchCode: branch.branchCode, actorId: req.user!.id });
+
+    res.status(204).send();
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.delete("/:id", requireRoles(UserRole.supervisor), async (req, res, next) => {
+  try {
+    const id = z.string().uuid().parse(req.params.id);
+    const branch = await prisma.branch.findUnique({ where: { id }, select: { id: true, isActive: true } });
+    if (!branch) throw new HttpError("Branch not found", 404);
+    if (!branch.isActive) {
+      throw new HttpError("Branch is already inactive. Use destroy with branch code confirmation to delete permanently.", 409);
+    }
 
     await prisma.branch.update({ where: { id }, data: { isActive: false } });
 
+    await writeAudit({
+      actorId: req.user!.id,
+      action: "branch_deactivate",
+      entityType: "branch",
+      entityId: id,
+    });
 
     res.status(204).send();
-
-
   } catch (e) {
-
-
     next(e);
-
-
   }
-
-
 });
 
 

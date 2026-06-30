@@ -12,7 +12,8 @@ export type SecurityEventType =
   | "https_blocked"
   | "idor_blocked"
   | "api_error"
-  | "suspicious_upload_rejected";
+  | "suspicious_upload_rejected"
+  | "branch_destroyed";
 
 function clientIp(req: Request): string {
   const xf = req.headers["x-forwarded-for"];

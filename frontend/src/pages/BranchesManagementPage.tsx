@@ -1,5 +1,5 @@
 import { App, Button, Card, Form, Input, Modal, Select, Switch, Table, Tag, Upload } from "antd";
-import { Plus, Search, Building2, UploadCloud, GitBranch, Check, X, Users } from "lucide-react";
+import { Plus, Search, Building2, UploadCloud, GitBranch, Check, X, Users, Trash2, PowerOff, FilterX } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import dayjs from "dayjs";
@@ -94,6 +94,12 @@ export function BranchesManagementPage() {
   const [rejectRemarks, setRejectRemarks] = useState("");
   const [rejectSaving, setRejectSaving] = useState(false);
 
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<BranchRow | null>(null);
+  const [deleteCodeInput, setDeleteCodeInput] = useState("");
+  const [deleteSaving, setDeleteSaving] = useState(false);
+  const [deactivateBusyId, setDeactivateBusyId] = useState<string | null>(null);
+
   const approvedMappings = allMappings.filter((m) => m.isCurrent && m.approvalStatus === "approved");
   const pendingMappings = allMappings.filter((m) => m.approvalStatus === "pending");
   const { pagination: branchPagination } = useTablePagination(branches.length);
@@ -169,6 +175,70 @@ export function BranchesManagementPage() {
     } catch (e: unknown) {
       void message.error(e instanceof Error ? e.message : "Failed to update branch");
     } finally { setEditSaving(false); }
+  }
+
+  function confirmDeactivate(branch: BranchRow) {
+    modal.confirm({
+      title: "Deactivate this branch?",
+      content: (
+        <div>
+          <p style={{ margin: "0 0 8px" }}>
+            <strong>{branch.branchCode}</strong> — {branch.branchName} will be marked inactive.
+          </p>
+          <p style={{ margin: 0, color: "#6B7280", fontSize: 13 }}>
+            After deactivation, you can permanently delete it by typing the branch code for confirmation.
+          </p>
+        </div>
+      ),
+      okText: "Deactivate",
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        setDeactivateBusyId(branch.id);
+        try {
+          await apiFetch(`/branches/${branch.id}`, { method: "DELETE" });
+          void message.success("Branch deactivated");
+          void loadBranches();
+          void loadMappings();
+        } catch (e: unknown) {
+          void message.error(e instanceof Error ? e.message : "Failed to deactivate branch");
+        } finally {
+          setDeactivateBusyId(null);
+        }
+      },
+    });
+  }
+
+  function openDelete(branch: BranchRow) {
+    setDeleteTarget(branch);
+    setDeleteCodeInput("");
+    setDeleteOpen(true);
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    const typed = deleteCodeInput.trim();
+    if (typed !== deleteTarget.branchCode) {
+      void message.error("Branch code does not match. Type the exact code shown for this branch.");
+      return;
+    }
+    setDeleteSaving(true);
+    try {
+      await apiFetch(`/branches/${deleteTarget.id}/destroy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ branchCode: typed }),
+      });
+      void message.success("Branch permanently deleted");
+      setDeleteOpen(false);
+      setDeleteTarget(null);
+      setDeleteCodeInput("");
+      void loadBranches();
+      void loadMappings();
+    } catch (e: unknown) {
+      void message.error(e instanceof Error ? e.message : "Failed to delete branch");
+    } finally {
+      setDeleteSaving(false);
+    }
   }
 
   async function approveMapping(mappingId: string) {
@@ -265,6 +335,24 @@ export function BranchesManagementPage() {
   const activeCount = branches.filter((b) => b.isActive).length;
   const vistaarCount = branches.filter((b) => b.branchType === "vistaar").length;
 
+  const hasActiveFilters =
+    Boolean(branchSearch) ||
+    statusFilter !== "all" ||
+    typeFilter !== "all" ||
+    Boolean(sfhFilter) ||
+    Boolean(stateFilter);
+
+  function clearFilters() {
+    setBranchSearch("");
+    setStatusFilter("all");
+    setTypeFilter("all");
+    setSfhFilter(undefined);
+    setStateFilter(undefined);
+    const next = new URLSearchParams(searchParams);
+    next.delete("sfh_id");
+    setSearchParams(next, { replace: true });
+  }
+
   const branchFormFields = (isEdit: boolean) => (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
       <Form.Item name="branchCode" label="Branch Code" rules={[{ required: true }]}><Input style={{ height: 38, fontFamily: "monospace" }} disabled={isEdit} /></Form.Item>
@@ -345,6 +433,14 @@ export function BranchesManagementPage() {
             showSearch
           />
           <Select placeholder="SFH state / region" style={{ flex: "1 1 160px", minWidth: 0 }} allowClear value={stateFilter} onChange={setStateFilter} options={stateOptions} optionFilterProp="label" showSearch />
+          <Button
+            icon={<FilterX size={14} />}
+            onClick={clearFilters}
+            disabled={!hasActiveFilters}
+            style={{ height: 36, flexShrink: 0 }}
+          >
+            Clear filters
+          </Button>
         </div>
         <Card style={{ borderRadius: 12, border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }} styles={{ body: { padding: 0 } }}>
           <Table<BranchRow>
@@ -384,6 +480,29 @@ export function BranchesManagementPage() {
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     <Button size="small" onClick={() => openEdit(r)} style={{ height: 32 }}>Edit</Button>
                     <Button size="small" icon={<GitBranch size={13} />} onClick={() => openAssign(r.id)} style={{ height: 32 }}>Remap</Button>
+                    {r.isActive ? (
+                      <Button
+                        size="small"
+                        danger
+                        icon={<PowerOff size={13} />}
+                        loading={deactivateBusyId === r.id}
+                        onClick={() => confirmDeactivate(r)}
+                        style={{ height: 32 }}
+                      >
+                        Deactivate
+                      </Button>
+                    ) : (
+                      <Button
+                        size="small"
+                        danger
+                        type="primary"
+                        icon={<Trash2 size={13} />}
+                        onClick={() => openDelete(r)}
+                        style={{ height: 32 }}
+                      >
+                        Delete
+                      </Button>
+                    )}
                   </div>
                 ),
               },
@@ -467,6 +586,44 @@ export function BranchesManagementPage() {
           <label style={{ fontSize: 13, fontWeight: 500, color: "#374151", display: "block", marginBottom: 4 }}>Remarks (optional)</label>
           <Input.TextArea rows={3} placeholder="Reason for rejection..." value={rejectRemarks} onChange={(e) => setRejectRemarks(e.target.value)} />
         </div>
+      </Modal>
+
+      <Modal
+        open={deleteOpen}
+        title="Permanently delete branch"
+        width={480}
+        onCancel={() => { setDeleteOpen(false); setDeleteTarget(null); setDeleteCodeInput(""); }}
+        onOk={() => void handleDelete()}
+        confirmLoading={deleteSaving}
+        okText="Delete permanently"
+        okButtonProps={{
+          danger: true,
+          disabled: deleteCodeInput.trim() !== (deleteTarget?.branchCode ?? ""),
+          style: { height: 38 },
+        }}
+        cancelButtonProps={{ style: { height: 38 } }}
+        destroyOnHidden
+      >
+        {deleteTarget && (
+          <div>
+            <p style={{ margin: "0 0 12px", color: "#374151" }}>
+              This will permanently remove <strong>{deleteTarget.branchName}</strong> and all related mappings and visit data. This cannot be undone.
+            </p>
+            <p style={{ margin: "0 0 8px", fontSize: 13, color: "#6B7280" }}>
+              Type <strong style={{ fontFamily: "monospace", color: "#DC2626" }}>{deleteTarget.branchCode}</strong> to confirm:
+            </p>
+            <Input
+              value={deleteCodeInput}
+              onChange={(e) => setDeleteCodeInput(e.target.value)}
+              placeholder={deleteTarget.branchCode}
+              style={{ height: 38, fontFamily: "monospace" }}
+              autoComplete="off"
+              onPressEnter={() => {
+                if (deleteCodeInput.trim() === deleteTarget.branchCode) void handleDelete();
+              }}
+            />
+          </div>
+        )}
       </Modal>
     </>
   );
