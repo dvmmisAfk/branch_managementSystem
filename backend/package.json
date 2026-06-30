@@ -17,6 +17,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
+    "db:generate-branch-seed": "node scripts/generate-branch-seed.mjs",
     "db:reseed-synthetic": "tsx scripts/reseed-synthetic-data.ts",
     "db:reseed-synthetic:production": "node scripts/reseed-production-run.mjs",
     "db:clear-visits": "node --experimental-strip-types prisma/scripts/clear-all-visits.ts",

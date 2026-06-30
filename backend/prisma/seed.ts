@@ -21,6 +21,7 @@ const prisma = new PrismaClient();
 type BranchRow = {
   branch_code: string;
   sap_code: string;
+  branch_name: string;
   location: string;
   city: string;
   state: string;
@@ -177,11 +178,11 @@ async function main() {
   });
 
   const sfhSpecs = [
-    { name: "Rajiv Mehta", legacyEmail: "rajiv.mehta@company.com", employeeId: "SFH-101", stateRegion: "Uttarakhand" },
-    { name: "Priya Sharma", legacyEmail: "priya.sharma@company.com", employeeId: "SFH-102", stateRegion: "Uttarakhand" },
-    { name: "Suresh Verma", legacyEmail: "suresh.verma@company.com", employeeId: "SFH-103", stateRegion: "Uttar Pradesh" },
-    { name: "Deepak Gupta", legacyEmail: "deepak.gupta@company.com", employeeId: "SFH-104", stateRegion: "Rajasthan" },
-    { name: "Vinod Yadav", legacyEmail: "vinod.yadav@company.com", employeeId: "SFH-105", stateRegion: "Haryana" },
+    { name: "SFH-001", employeeId: "SFH-001", stateRegion: "STATE-01" },
+    { name: "SFH-002", employeeId: "SFH-002", stateRegion: "STATE-02" },
+    { name: "SFH-003", employeeId: "SFH-003", stateRegion: "STATE-03" },
+    { name: "SFH-004", employeeId: "SFH-004", stateRegion: "STATE-04" },
+    { name: "SFH-005", employeeId: "SFH-005", stateRegion: "STATE-05" },
   ] as const;
 
   const sfhByName = new Map<string, string>();
@@ -192,10 +193,7 @@ async function main() {
     const passwordHash = await bcrypt.hash(plain, 12);
     const supervisorPasswordEnc = encryptSfhSupervisorPasswordVault(plain);
 
-    let user = await prisma.user.findUnique({ where: { email: s.legacyEmail } });
-    if (!user) {
-      user = await prisma.user.findUnique({ where: { email } });
-    }
+    let user = await prisma.user.findUnique({ where: { email } });
     if (user) {
       await prisma.user.update({
         where: { id: user.id },
@@ -248,7 +246,7 @@ async function main() {
       where: { branchCode: b.branch_code },
       update: {
         sapCode: b.sap_code || null,
-        branchName: b.location || b.branch_code,
+        branchName: b.branch_name,
         location: b.location,
         city: b.city,
         state: b.state,
@@ -257,7 +255,7 @@ async function main() {
       create: {
         branchCode: b.branch_code,
         sapCode: b.sap_code || null,
-        branchName: b.location || b.branch_code,
+        branchName: b.branch_name,
         location: b.location,
         city: b.city,
         state: b.state,

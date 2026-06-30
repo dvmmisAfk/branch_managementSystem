@@ -15,6 +15,7 @@
  *   npm run db:reseed-synthetic -- --dry-run
  */
 import dotenv from "dotenv";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -83,10 +84,18 @@ async function wipeBranchAndSfhData() {
 }
 
 function runSeed() {
-  const result = spawnSync(process.platform === "win32" ? "npx.cmd" : "npx", ["tsx", "prisma/seed.ts"], {
+  const prodEnvPath = path.join(backendRoot, ".env.production.local");
+  const seedEnv = { ...process.env };
+  if (fs.existsSync(prodEnvPath) && process.env.DATABASE_URL?.includes("supabase")) {
+    seedEnv.DOTENV_CONFIG_PATH = prodEnvPath;
+  }
+
+  const cmd = process.platform === "win32" ? "npx.cmd" : "npx";
+  const result = spawnSync(cmd, ["tsx", "prisma/seed.ts"], {
     cwd: backendRoot,
     stdio: "inherit",
-    env: { ...process.env, DOTENV_CONFIG_PATH: path.join(backendRoot, ".env.production.local") },
+    env: seedEnv,
+    shell: process.platform === "win32",
   });
   if (result.status !== 0) {
     process.exit(result.status ?? 1);
@@ -130,7 +139,7 @@ async function main() {
   runSeed();
 
   const after = await counts();
-  console.log(`[reseed] Done: branches=${after.branches} sfhs=${after.sfhs} mappings expected ~177`);
+  console.log(`[reseed] Done: branches=${after.branches} sfhs=${after.sfhs} mappings expected ~100`);
 }
 
 main()

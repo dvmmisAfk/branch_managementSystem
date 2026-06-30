@@ -181,7 +181,7 @@ cd /app && npm run db:reseed-synthetic
 
 5. Save the one-time SFH passwords printed in the shell log (`[seed] SFH Rajiv Mehta — login ID: SFH-101 — …`).
 
-Expected result: **5 SFHs**, **177 branches** (ZK/ZC/ZD codes), supervisor login unchanged.
+Expected result: **5 SFHs**, **100 branches** (BRN-001…BRN-100), supervisor login unchanged.
 
 ---
 
